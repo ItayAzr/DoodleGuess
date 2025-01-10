@@ -2,11 +2,12 @@
 import pygame
 import socket
 import threading
-from Line import Line
+
 
 
 def handle_client(conn, address):
     print(f"New connection from {address}")
+    turn = "draw"
     while True:
         try:
             data = conn.recv(1024).decode()  # Receive data
@@ -19,7 +20,8 @@ def handle_client(conn, address):
                 line_txt = data[1]
                 print(line_txt)
 
-
+            if data[0] == "turn":
+                conn.send(turn.encode())
 
         except:
             break
