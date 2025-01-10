@@ -5,12 +5,12 @@ import threading
 from Line import Line
 
 
-def handle_client(conn, address, line):
+def handle_client(conn, address):
     print(f"New connection from {address}")
     while True:
         try:
             data = conn.recv(1024).decode()  # Receive data
-            if not data:
+            if data == 'exit':
                 print("Connection closed by client")
                 break  # Connection closed by client
 
@@ -19,11 +19,12 @@ def handle_client(conn, address, line):
                 line_txt = data[1]
                 print(line_txt)
 
-            conn.send(line.upper().encode())  # Send response
+
+
         except:
             break
-    print(f"Connection with {address} closed")
-    conn.close()
+
+
 
 def server_program():
     host = "127.0.0.1"  # Localhost
@@ -35,9 +36,8 @@ def server_program():
     print(f"Server listening on {host}:{port}...")
 
     while True:
-        line = Line
         conn, address = server_socket.accept()  # Accept new connection
-        thread1 = threading.Thread(target=handle_client, args=(conn, address,line))
+        thread1 = threading.Thread(target=handle_client, args=(conn, address))
         thread1.start()  # Start the thread to handle the client
         print(f"Active threads: {threading.active_count()}")
 

@@ -3,24 +3,9 @@ import socket
 from Line import Line
 
 
-def client_program(line):
-    host = "127.0.0.1"  # Server IP address
-    port = 65432  # Server port
+host = "127.0.0.1"  # Server IP address
+port = 65432  # Server port
 
-    # Create socket
-    client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    client_socket.connect((host, port))  # Connect to server
-
-    print(f"Connected to server at {host}:{port}")
-    while True:
-        message = "line/" + line.stringify()
-        if message.lower() == 'exit':
-            break
-
-        client_socket.send(message.encode())  # Send message
-        data = client_socket.recv(1024).decode()  # Receive response
-
-    client_socket.close()  # Close connection
 
 # initializing imported module
 pygame.init()
@@ -53,7 +38,14 @@ running = True
 
 drawing = False
 # keep game running till running is true
+
+# Create socket
+client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+client_socket.connect((host, port))  # Connect to server
+
+
 while running:
+
 
     elapsed_time = (pygame.time.get_ticks() - start_time)/1000 # calculates the time that has passed (in seconds)
 
@@ -112,15 +104,21 @@ while running:
                 if drawing:
                     current_pos = event.pos
                     pygame.draw.line(screen, color, last_pos, current_pos, width)  # Draw a line
-                    print("width: " + str(width))
                     line.update(color, last_pos, current_pos, width)
+                    message = "line/" + line.stringify()  # convert line to string
+                    client_socket.send(message.encode())  # Send line data
+
                     last_pos = current_pos
-                    client_program(line)
+
         # if event is of type quit then
         # set running bool to false
         if event.type == pygame.QUIT:
+            message = 'exit'
+            client_socket.send(message.encode())  # Send line data
+            client_socket.close()  # Close connection
             running = False
 
     pygame.display.update()
+
 
 
