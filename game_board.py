@@ -1,6 +1,23 @@
 import pygame
 import socket
+from tkinter import *
 from Line import Line
+
+size = "940*540"
+
+
+root = Tk()
+root.geometry("1080x920")
+
+frame = Frame(root, bg='black', bd=3,)
+C = Canvas(frame, width=940, height=540, cursor='dot')
+frame.pack()
+C.pack()
+
+
+
+root.mainloop()
+
 
 def start_drawing(host, port):
 
@@ -104,7 +121,7 @@ def start_drawing(host, port):
                         current_pos = event.pos
                         pygame.draw.line(screen, color, last_pos, current_pos, width)  # Draw a line
                         line.update(color, last_pos, current_pos, width)
-                        message = "line/" + line.stringify()  # convert line to string
+                        message = "request/line/" + line.stringify()  # convert line to string
                         client_socket.send(message.encode())  # Send line data
 
                         last_pos = current_pos

@@ -16,12 +16,13 @@ def handle_client(conn, address):
                 break  # Connection closed by client
 
             data = str(data).split("/")
-            if data[0] == "line":
-                line_txt = data[1]
-                print(line_txt)
+            if data[0] == 'request':
+                if data[1] == "line":
+                    line_txt = data[2]
+                    print(line_txt)
 
-            if data[0] == "turn":
-                conn.send(turn.encode())
+                if data[1] == "turn":
+                    conn.send(turn.encode())
 
         except:
             break
@@ -29,6 +30,7 @@ def handle_client(conn, address):
 
 
 def server_program():
+    user_list = []
     host = "127.0.0.1"  # Localhost
     port = 65432        # Arbitrary non-privileged port
 
@@ -38,7 +40,9 @@ def server_program():
     print(f"Server listening on {host}:{port}...")
 
     while True:
-        conn, address = server_socket.accept()  # Accept new connection
+        conn, address = server_socket.accept() # Accept new connection
+        user
+        user_list.append()
         thread1 = threading.Thread(target=handle_client, args=(conn, address))
         thread1.start()  # Start the thread to handle the client
         print(f"Active threads: {threading.active_count()}")
