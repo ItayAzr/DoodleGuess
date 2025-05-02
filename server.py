@@ -5,18 +5,7 @@ import sqlite3
 import hashlib
 import json
 import struct
-import jwt
-import secrets
-import dotenv
-from dotenv import load_dotenv
-
-
-def create_key():
-    dotenv.set_key('key.env','SECRET_KEY', str(secrets.token_hex(32)))
-
-def get_key():
-    load_dotenv('key.env')
-    return os.getenv('SECRET_KEY')
+import GameServer
 
 # checks if username is taken
 def exist(username):
@@ -59,7 +48,7 @@ def create_user(username, password):
                 VALUES (?, ?, 0, DATETIME('now'))
                 '''
                 cursor.execute(insert_query, (username, password))
-                connection.close()
+
 
                 print('User created successfully')
                 return 'User created', 'success'
@@ -72,27 +61,29 @@ def create_user(username, password):
 
 # login
 def confirm_login(username, password):
-    with sqlite3.connect('DataBase.db') as connection:
+    try:
+        with sqlite3.connect('DataBase.db') as connection:
 
-        cursor = connection.cursor()
-        check_user = '''
-        SELECT * FROM users WHERE username = ? AND password = ?
-        '''
-        try:
+            cursor = connection.cursor()
+            check_user = '''
+            SELECT * FROM users WHERE username = ? AND password = ?
+            '''
+
             cursor.execute(check_user, (username,password,))
             result = cursor.fetchall()
-            connection.close()
 
-            if result:
-                for row in result:
-                    print(row)
-                return 'login succeeded','success'
-            else:
-                print('user does not exist')
-                return 'user doesnt exist', 'error'
-        except:
-            print('there was an Error in the system')
-            return 'login failed', 'server error'
+        if result:
+            for row in result:
+                print(row)
+
+
+            return 'login succeeded','success'
+        else:
+            print('user does not exist')
+            return 'user doesnt exist', 'error'
+    except Exception as e:
+        print(e)
+        return 'login failed', 'server error'
 
 
 def verify(request):
@@ -106,20 +97,10 @@ def verify(request):
         print(e)
         return False
 
-# generates token for the user
-def generate_token(username):
-    payload = {
-        "use r_id": username,
-    }
-    token = jwt.encode(payload, get_key(), algorithm="HS256")
-    return token
+def create_lobby(data):
+    settings = data.values()
+    print(f'lobby setting: {settings}')
 
-def save_token(username, token):
-    data = {
-        username: token
-    }
-    with open('Tokens.json', 'w') as f:
-        json.dump(data, f, indent=4)
 
 def handle_client(conn, address):
     print(f"New connection from {address}")
@@ -173,8 +154,7 @@ def handle_client(conn, address):
 
                         }
                     }
-                    if status == 'success':
-                        response['data']['token'] = generate_token(request['data']['username'])
+
 
                 if request['request'] == 'signup':
                     msg, status = create_user(request['data']['username'],  request['data']['password'])
@@ -185,9 +165,15 @@ def handle_client(conn, address):
                         }
                     }
 
-                if request['request'] == 'startgame':
-                    pass
-                    # game_thread
+                if request['request'] == 'create_lobby':
+                    msg, status = create_lobby(request['data'])
+                    response = {
+                        'status': status,
+                        'data': {
+                            'msg': msg
+                        }
+                    }
+                    #game_thread
                     #game_thread = threading.Thread(target=, args=(conn, address))
 
                 # Send the response length first

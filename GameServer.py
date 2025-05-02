@@ -1,24 +1,36 @@
 import socket
 import threading
 
-def handle_client(conn, address):
-    print(f"New connection from {address}")
+
+class GameServer():
+    def __init__(self,hostname, max_players):
+        self.max = max_players
+        self.status = 'waiting for players'
+        self.playerList = [hostname]
+        self.scores = {
+            hostname: 0
+        }
+        self.full = False
+
+    def check_user(self, username):
+        for player in self.playerList:
+            if player == username:
+                return player, self.scores[player]
+            return False
+
+    def add_player(self,username):
+        if not self.full:
+            if not self.check_user(username):
+                self.playerList.append(username)
+                self.scores[username] = 0
+                if len(self.playerList) >= self.max:
+                    self.full = True
+        else:
+            return 'lobby is full'
+
+    def handle_client(self, conn, address):
+        print(f"New connection from {address}")
 
 
-def server_program():
-    host = "127.0.0.1"  # Localhost
-    port = 65632
-
-    server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    server_socket.bind((host, port))
-    server_socket.listen(10)  # Allow up to 5 pending connections
-    print(f"Server listening on {host}:{port}...")
-
-    while True:
-        conn, address = server_socket.accept() # Accept new connectio
-        thread = threading.Thread(target=, args=(conn, address))
-        thread.start()  # Start the thread to handle the client
-        print(f"Active threads: {threading.active_count()}")
-
-if __name__ == '__main__':
-    server_program()
+def Game_Maneger():
+    

@@ -4,7 +4,6 @@ import hashlib
 import json
 import struct
 
-from PyInstaller.lib.modulegraph.modulegraph import entry
 
 size1 = [15, 3]  # width, height for login logout and exit buttons
 
@@ -16,7 +15,6 @@ class App(tk.Tk):
         self.geometry("1920x1080")
         self.config(bg='#3f4345')
         self.User = 'Guest'
-        self.Token = -1
         # Container to hold all frames
         self.container = tk.Frame(self)
         self.container.pack(fill="both", expand=True)
@@ -126,17 +124,17 @@ class LoginPage(tk.Frame):
                 request = {
                     'request': 'login',
                     'data': {
-                        'username': hashlib.sha256(username.encode()).hexdigest(),
+                        'username': username,
                         'password': hashlib.sha256(password.encode()).hexdigest(),
                     }
                 }
-                request['verify'] = hashlib.sha256(json.dumps(request).encode()).hexdigest()
+                hash = hashlib.sha256(json.dumps(request).encode()).hexdigest()
+                request['verify'] = hash
                 result = send_data(client_socket, json.dumps(request).encode())
                 status = result['status']
 
                 if status == 'success':
                     self.controller.User = username
-                    self.controller.Token = result['data']['Token']
                     self.controller.show_frame(HomePage)
                 elif status == 'error':
                     print('fail')
@@ -145,10 +143,10 @@ class LoginPage(tk.Frame):
                     print('fail')
                     msg = 'something went wrong. please try again'
             error_label = tk.Label(frame, bg='lightblue', text=msg, fg='red')
-            error_label.grid(row=2, column=0, padx=10, pady=5, sticky='n')
+            error_label.grid(row=5, column=0, sticky='s')
 
         login_button = tk.Button(frame, text='login', command=login)
-        login_button.grid(row=5, column=0, sticky='n')
+        login_button.grid(row=6, column=0, sticky='n')
         frame.grid(row=2, column=0, sticky='n')
 
 
@@ -167,70 +165,73 @@ class SignupPage(tk.Frame):
         self.grid_rowconfigure(2, weight=3)
 
 
-        label1 = tk.Label(self, text="Create a new user", height=4, background='lightblue',
+        self.label1 = tk.Label(self, text="Create a new user", height=4, background='lightblue',
                           font=('TkDefaultFont', 16))
-        label1.grid(row=0, column=0)
+        self.label1.grid(row=0, column=0)
 
-        frame = tk.Frame(self, bg='lightblue')
+        self.frame = tk.Frame(self, bg='lightblue')
 
         # Create and place the username label and entry
-        username_label = tk.Label(frame, text="Username:",)
-        username_label.grid(row=0, column=0, padx=10, pady=5, sticky="e")
-        username_entry = tk.Entry(frame)
-        username_entry.grid(row=0, column=1, padx=10, pady=5, sticky="w")
+        self.username_label = tk.Label(self.frame, text="Username:",)
+        self.username_label.grid(row=0, column=0, padx=10, pady=5, sticky="e")
+        self.username_entry = tk.Entry(self.frame)
+        self.username_entry.grid(row=0, column=1, padx=10, pady=5, sticky="w")
 
         # Create and place the password label and entry
-        password_label = tk.Label(frame, text="Password:")
-        password_label.grid(row=1, column=0, padx=10, pady=5, sticky="e")
-        password_entry = tk.Entry(frame, show="*")
-        password_entry.grid(row=1, column=1, padx=10, pady=5, sticky="w")
+        self.password_label = tk.Label(self.frame, text="Password:")
+        self.password_label.grid(row=1, column=0, padx=10, pady=5, sticky="e")
+        self.password_entry = tk.Entry(self.frame, show="*")
+        self.password_entry.grid(row=1, column=1, padx=10, pady=5, sticky="w")
 
         # Create and place the confirm password label and entry
-        confirm_password_label = tk.Label(frame, text="Confirm Password:")
-        confirm_password_label.grid(row=2, column=0, padx=10, pady=5, sticky="e")
-        confirm_password_entry = tk.Entry(frame, show="*")
-        confirm_password_entry.grid(row=2, column=1, padx=10, pady=5, sticky="w")
+        self.confirm_password_label = tk.Label(self.frame, text="Confirm Password:")
+        self.confirm_password_label.grid(row=2, column=0, padx=10, pady=5, sticky="e")
+        self.confirm_password_entry = tk.Entry(self.frame, show="*")
+        self.confirm_password_entry.grid(row=2, column=1, padx=10, pady=5, sticky="w")
 
-        def register_user():
-            msg = ''
-            username = username_entry.get()
-            password = password_entry.get()
-            confirm_password = confirm_password_entry.get()
-            if not username:
-                msg = 'enter username'
-            elif not password:
-                msg = 'enter password'
-            elif not confirm_password:
-                msg = 'confirm password'
-            elif confirm_password != password:
-                msg = 'passwords not identical'
-            else:
-                request = {
-                    'request': 'signup',
-                    'data': {
-                        'username': hashlib.sha256(username.encode()).hexdigest(),
-                        'password': hashlib.sha256(password.encode()).hexdigest(),
-                    }
-                }
-                request['verify'] = hashlib.sha256(json.dumps(request).encode()).hexdigest()
-                result = send_data(client_socket, json.dumps(request).encode())
-                status = result['status']
-                if status == 'success':
-                    self.controller.User = username
-                    self.controller.show_frame(LoginPage)
-                elif status == 'failed':
-                    msg = 'username is taken'
-                else:
-                    msg = 'something went wrong. please try again'
-            error_label = tk.Label(self, bg='lightblue', text=msg, fg='red', )
-            error_label.grid(row=2, column=0, padx=10, pady=5, sticky='n')
 
         # Create and place the signup button
-        signup_button = tk.Button(frame, text="Signup", command=register_user)
-        signup_button.grid(row=3, column=0, columnspan=2, pady=20)
+        self.signup_button = tk.Button(self.frame, text="Signup", command=self.register_user)
+        self.signup_button.grid(row=3, column=0, columnspan=2, pady=20)
 
+        self.error_label = tk.Label
+        self.frame.grid(row=1, column=0, stick='n')
 
-        frame.grid(row=1, column=0, stick='n')
+    def register_user(self):
+        msg = ''
+        username = self.username_entry.get()
+        password = self.password_entry.get()
+        confirm_password = self.confirm_password_entry.get()
+        if not username:
+            msg = 'enter username'
+        elif not password:
+            msg = 'enter password'
+        elif not confirm_password:
+            msg = 'confirm password'
+        elif confirm_password != password:
+            msg = 'passwords not identical'
+        else:
+            request = {
+                'request': 'signup',
+                'data': {
+                    'username': username,
+                    'password': hashlib.sha256(password.encode()).hexdigest(),
+                }
+            }
+            hash = hashlib.sha256(json.dumps(request).encode()).hexdigest()
+            request['verify'] = hash
+            result = send_data(client_socket, json.dumps(request).encode())
+            status = result['status']
+            if status == 'success':
+                self.controller.User = username
+                self.controller.show_frame(LoginPage)
+            elif status == 'failed':
+                msg = 'username is taken'
+            else:
+                msg = 'something went wrong. please try again'
+        self.error_label = tk.Label(self, bg='lightblue', text=msg, fg='red',)
+        self.error_label.grid(row=2, column=0, padx=10, pady=5, sticky='n')
+
 
 class HomePage(tk.Frame):
     def __init__(self, parent, controller):
@@ -250,16 +251,22 @@ class HomePage(tk.Frame):
         else:
             self.controller.logout.grid(row=0, column=1)
 
-        label1 = tk.Label(self, text=f"welcome to DoodleGuess, {self.controller.User}", height=4, background='lightblue',
+        self.label = tk.Label(self, text=f"welcome to DoodleGuess, {self.controller.User}", height=4, background='lightblue',
                           font=('TkDefaultFont', 16))
 
 
-        join_button = tk.Button(self, text="Play", width=2*size1[0], height=2*size1[1],
-                                command=lambda: self.controller.show_frame(Temp1))
+        self.join_button = tk.Button(self, text="Play", width=2*size1[0], height=2*size1[1],
+                                command=self.join)
 
 
-        label1.grid(row=1, column=0, sticky='n')
-        join_button.grid(row=2, column=0, sticky='n')
+        self.label.grid(row=1, column=0, sticky='n')
+        self.join_button.grid(row=2, column=0, sticky='n')
+
+    def join(self):
+        if self.controller.user == 'Guest':
+            pass
+        else:
+            self.controller.show_frame(Temp1)
 
 class Temp1(tk.Frame):
     def __init__(self, parent, controller):
@@ -282,6 +289,14 @@ class Temp1(tk.Frame):
         label = tk.Label(self, text='enter lobby code')
         entry = tk.Entry(self,)
 
+class LobbyCreate(tk.Frame):
+    def __init__(self, parent, controller):
+        super().__init__(parent)
+        self.controller = controller
+        self.config(background='lightblue')
+
+        self.Label = tk.Label(self, text='create lobby')
+
 
 class LobbyPage(tk.Frame):
     def __init__(self, parent, controller):
@@ -298,8 +313,6 @@ class LobbyPage(tk.Frame):
         start_button.grid()
         waiting = True
         f_players = tk.Frame(self, bg='grey')
-
-
 
 class GameBoard(tk.Frame):
     def __init__(self, parent, controller):
@@ -324,6 +337,7 @@ def send_data(soc, data):
         # Receive response length first
         response_length_data = soc.recv(4)
         response_length = struct.unpack("!I", response_length_data)[0]
+        print(f"Expecting {response_length} bytes...")
 
         # Receive full response data
         response_data = b""
