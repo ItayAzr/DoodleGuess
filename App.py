@@ -1,5 +1,7 @@
 import socket
 import tkinter as tk
+from logging import exception
+from tkinter import ttk
 import hashlib
 import json
 import struct
@@ -24,25 +26,27 @@ class App(tk.Tk):
         self.container.grid_rowconfigure(1, weight=10)
         self.container.grid_columnconfigure(0, weight=10)
 
-        self.navbar = tk.Frame(self.container, bg='#3f4345')
+        self.navbar = tk.Frame(self.container, bg='lightblue')
+        self.navbar.grid_columnconfigure(0, weight=1)
+        self.buttons = tk.Frame(self.navbar, bg='gray')
 
-        self.exit_button = tk.Button(self.navbar, text='Exit', width=size1[0], height=size1[1],
+        self.exit_button = tk.Button(self.buttons, text='Exit', width=size1[0], height=size1[1],
                                 command=self.destroy)
 
-        self.home = tk.Button(self.navbar, text='Home', width=size1[0], height=size1[1],
+        self.home = tk.Button(self.buttons, text='Home', width=size1[0], height=size1[1],
                                 command=lambda: self.show_frame(HomePage))
 
-        self.logout = tk.Button(self.navbar, text='logout', width=size1[0], height=size1[1],
+        self.logout = tk.Button(self.buttons, text='logout', width=size1[0], height=size1[1],
                                 command=self.log_out)
 
-        self.login = tk.Button(self.navbar, text='login', width=size1[0], height=size1[1],
+        self.login = tk.Button(self.buttons, text='login', width=size1[0], height=size1[1],
                                 command=lambda: self.show_frame(LoginPage))
 
-        self.signup = tk.Button(self.navbar, text='signup', width=size1[0], height=size1[1],
+        self.signup = tk.Button(self.buttons, text='signup', width=size1[0], height=size1[1],
                                 command=lambda: self.show_frame(SignupPage))
 
 
-        self.navbar.grid(sticky='nesw')
+        self.navbar.grid(row=0, column=0, sticky='nesw')
 
         self.frames = {}
         self.show_frame(HomePage)
@@ -53,7 +57,7 @@ class App(tk.Tk):
         self.show_frame(HomePage)
 
     def refresh_navbar(self):
-        for button in self.navbar.winfo_children():
+        for button in self.buttons.winfo_children():
             button.grid_forget()
         self.exit_button.grid()
 
@@ -76,13 +80,15 @@ class App(tk.Tk):
         # Bring the new frame to the front
         frame.tkraise()
 
+
 class LoginPage(tk.Frame):
     def __init__(self, parent, controller):
         super().__init__(parent)
         self.controller = controller
         self.config(background='lightblue')
 
-        # Configure navbar buttons
+        # Configure navbar
+        self.controller.buttons.grid(sticky='ew')
         self.controller.home.grid(row=0, column=1)
 
         # Configure grid layout
@@ -92,29 +98,29 @@ class LoginPage(tk.Frame):
 
 
         # Create and place the username label and entry
-        frame = tk.Frame(self, background='lightblue')
+        self.frame = tk.Frame(self, background='lightblue')
 
 
-        label1 = tk.Label(self, text="welcome to DoodleGuess", height=4, background='lightblue',
+        self.label1 = tk.Label(self, text="welcome to DoodleGuess", height=4, background='lightblue',
                           font=('TkDefaultFont', 16))
-        label1.grid(row=1, column=0, sticky='n')
+        self.label1.grid(row=1, column=0, sticky='n')
 
 
-        username_label = tk.Label(frame, text="Username:")
-        username_label.grid(row=1, column=0, padx=10, pady=5, sticky="sw")
-        username_entry = tk.Entry(frame)
-        username_entry.grid(row=2, column=0, padx=10, pady=5, sticky='sw')
+        self.username_label = tk.Label(self.frame, text="Username:")
+        self.username_label.grid(row=1, column=0, padx=10, pady=5, sticky="sw")
+        self.username_entry = tk.Entry(self.frame)
+        self.username_entry.grid(row=2, column=0, padx=10, pady=5, sticky='sw')
 
         # Create and place the password label and entry
-        password_label = tk.Label(frame, text="Password:")
-        password_label.grid(row=3, column=0, padx=10, pady=5, sticky="nw")
-        password_entry = tk.Entry(frame, show="*")
-        password_entry.grid(row=4, column=0, padx=10, pady=5, sticky='nw')
+        self.password_label = tk.Label(self.frame, text="Password:")
+        self.password_label.grid(row=3, column=0, padx=10, pady=5, sticky="nw")
+        self.password_entry = tk.Entry(self.frame, show="*")
+        self.password_entry.grid(row=4, column=0, padx=10, pady=5, sticky='nw')
 
 
         def login():
-            username = username_entry.get()
-            password = password_entry.get()
+            username = self.username_entry.get()
+            password = self.password_entry.get()
             msg = ''
             if not username:
                 msg = 'enter username'
@@ -142,12 +148,15 @@ class LoginPage(tk.Frame):
                 else:
                     print('fail')
                     msg = 'something went wrong. please try again'
-            error_label = tk.Label(frame, bg='lightblue', text=msg, fg='red')
-            error_label.grid(row=5, column=0, sticky='s')
+            self.error_label = tk.Label(self.frame, bg='lightblue', text=msg, fg='red')
+            self.error_label.grid(row=5, column=0, sticky='s')
 
-        login_button = tk.Button(frame, text='login', command=login)
-        login_button.grid(row=6, column=0, sticky='n')
-        frame.grid(row=2, column=0, sticky='n')
+        self.login_button = tk.Button(self.frame, text='login', pady=5, command=login)
+        self.login_button.grid(row=6, column=0, sticky='n')
+
+        self.frame.grid(row=2, column=0, sticky='n')
+        self.signup = tk.Button(self, text='sign up', command=lambda: self.controller.show_frame(SignupPage))
+        self.signup.grid(row=3, column=0)
 
 
 class SignupPage(tk.Frame):
@@ -207,7 +216,7 @@ class SignupPage(tk.Frame):
         elif not password:
             msg = 'enter password'
         elif not confirm_password:
-            msg = 'confirm password'
+            msg = 'enter your password again'
         elif confirm_password != password:
             msg = 'passwords not identical'
         else:
@@ -244,8 +253,9 @@ class HomePage(tk.Frame):
         self.grid_rowconfigure(2, weight=4)
         self.grid_columnconfigure(0, weight=1)
 
-        # Configure navbar buttons
-        if self.controller.Token == -1:
+        # Configure navbar
+        self.controller.buttons.grid(sticky='ew')
+        if self.controller.User == 'Guest':
             self.controller.login.grid(row=0, column=1)
             self.controller.signup.grid(row=0, column=2)
         else:
@@ -263,7 +273,7 @@ class HomePage(tk.Frame):
         self.join_button.grid(row=2, column=0, sticky='n')
 
     def join(self):
-        if self.controller.user == 'Guest':
+        if self.controller.User == 'Guest':
             pass
         else:
             self.controller.show_frame(Temp1)
@@ -277,7 +287,8 @@ class Temp1(tk.Frame):
         join_button = tk.Button(self, text="Join Lobby", width=2 * size1[0], height=2 * size1[1])
         join_button.grid(row=0, column=0)
 
-        create_button = tk.Button(self,text='Create Lobby', width=2 * size1[0], height=2 * size1[1])
+        create_button = tk.Button(self,text='Create Lobby', width=2 * size1[0], height=2 * size1[1],
+                                  command=lambda:self.controller.show_frame(LobbyCreate))
         create_button.grid(row=0, column=1)
 
     def join(self):
@@ -295,7 +306,62 @@ class LobbyCreate(tk.Frame):
         self.controller = controller
         self.config(background='lightblue')
 
-        self.Label = tk.Label(self, text='create lobby')
+        self.Title = tk.Label(self, text='Choose lobby Settings', font=('TkDefaultFont', 16))
+        self.Title.grid()
+        self.mFrame = tk.Frame(self)
+
+
+        self.label1 = tk.Label(self.mFrame, text='Players:')
+        self.label1.grid(row=0, column=0)
+
+        self.select_player = ttk.Combobox(self.mFrame, values=['2', '3', '4', '5', '6', '7', '8', '9', '10'])
+        self.select_player.grid(row=0, column=1)
+
+        self.label2 = tk.Label(self.mFrame, text="Time Limit (30 - 90 sec):")
+        self.label2.grid(row=1, column=0)
+
+        self.time_entry = tk.Entry(self.mFrame)
+        self.time_entry.grid(row=1, column=1)
+
+        self.mFrame.grid(row=1, column=0)
+
+        self.create_lobby_button = tk.Button(self, text='create lobby', width=2 * size1[0], height=2 * size1[1],
+                                             command=self.create_lobby)
+        self.create_lobby_button.grid(row=2, column=0)
+
+
+    def create_lobby(self):
+        host = self.controller.User
+        max_players = self.select_player.get()
+        time_limit = self.time_entry.get()
+
+
+        if not self.select_player.get():
+            return False
+
+        if not time_limit:
+            return False
+        try:
+            time_limit = int(time_limit)
+            if time_limit < 30 or time_limit > 90:
+                return False
+        except exception as e:
+            print(e)
+            return False
+
+
+        request = {
+            'request': 'create_lobby',
+            'data': {
+                'host': host,
+                'max_players': max_players,
+                'time_limit': time_limit
+            }
+        }
+        hash = hashlib.sha256(json.dumps(request).encode()).hexdigest()
+        request['verify'] = hash
+        result = send_data(client_socket, json.dumps(request).encode())
+
 
 
 class LobbyPage(tk.Frame):

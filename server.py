@@ -99,8 +99,14 @@ def verify(request):
 
 def create_lobby(data):
     settings = data.values()
-    print(f'lobby setting: {settings}')
+    host = settings[0]
+    max_players = settings[1]
+    time_limit = settings[2]
 
+    print(f'lobby setting: {settings}')
+    lobby = GameServer.GameServer(host, max_players, time_limit)
+    while lobby.running:
+        pass
 
 def handle_client(conn, address):
     print(f"New connection from {address}")
@@ -155,7 +161,6 @@ def handle_client(conn, address):
                         }
                     }
 
-
                 if request['request'] == 'signup':
                     msg, status = create_user(request['data']['username'],  request['data']['password'])
                     response = {
@@ -166,19 +171,21 @@ def handle_client(conn, address):
                     }
 
                 if request['request'] == 'create_lobby':
-                    msg, status = create_lobby(request['data'])
+                    status, msg = create_lobby(request['data'])
                     response = {
                         'status': status,
                         'data': {
                             'msg': msg
                         }
                     }
-                    #game_thread
-                    #game_thread = threading.Thread(target=, args=(conn, address))
+
+
 
                 # Send the response length first
                 response = json.dumps(response).encode()
                 conn.send(struct.pack("!I", len(response)))
+
+                # Send the response
                 conn.send(response)
             else:
                 response = {
@@ -207,7 +214,7 @@ def server_program():
     print(f"Server listening on {host}:{port}...")
 
     while True:
-        conn, address = server_socket.accept() # Accept new connectio
+        conn, address = server_socket.accept() # Accept new connection
         thread = threading.Thread(target=handle_client, args=(conn, address))
         thread.start()  # Start the thread to handle the client
         print(f"Active threads: {threading.active_count()}")

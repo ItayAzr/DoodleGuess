@@ -2,13 +2,16 @@ import socket
 import threading
 
 
-class GameServer():
-    def __init__(self,hostname, max_players):
+class GameServer:
+    def __init__(self, hostname, max_players, time_limit):
+        self.host = hostname
         self.max = max_players
+        self.time_limit = time_limit
+        self.running = True
         self.status = 'waiting for players'
         self.playerList = [hostname]
         self.scores = {
-            hostname: 0
+            self.host: 0
         }
         self.full = False
 
@@ -32,5 +35,3 @@ class GameServer():
         print(f"New connection from {address}")
 
 
-def Game_Maneger():
-    
