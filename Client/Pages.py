@@ -1,84 +1,4 @@
-import socket
 import tkinter as tk
-from logging import exception
-from tkinter import ttk
-import hashlib
-import json
-import struct
-
-
-size1 = [15, 3]  # width, height for login logout and exit buttons
-
-
-class App(tk.Tk):
-    def __init__(self):
-        super().__init__()
-        self.title("DoodleGuess")
-        self.geometry("1920x1080")
-        self.config(bg='#3f4345')
-        self.User = 'Guest'
-        # Container to hold all frames
-        self.container = tk.Frame(self)
-        self.container.pack(fill="both", expand=True)
-
-        # Make the container responsive
-        self.container.grid_rowconfigure(0, weight=1)
-        self.container.grid_rowconfigure(1, weight=10)
-        self.container.grid_columnconfigure(0, weight=10)
-
-        self.navbar = tk.Frame(self.container, bg='lightblue')
-        self.navbar.grid_columnconfigure(0, weight=1)
-        self.buttons = tk.Frame(self.navbar, bg='gray')
-
-        self.exit_button = tk.Button(self.buttons, text='Exit', width=size1[0], height=size1[1],
-                                command=self.destroy)
-
-        self.home = tk.Button(self.buttons, text='Home', width=size1[0], height=size1[1],
-                                command=lambda: self.show_frame(HomePage))
-
-        self.logout = tk.Button(self.buttons, text='logout', width=size1[0], height=size1[1],
-                                command=self.log_out)
-
-        self.login = tk.Button(self.buttons, text='login', width=size1[0], height=size1[1],
-                                command=lambda: self.show_frame(LoginPage))
-
-        self.signup = tk.Button(self.buttons, text='signup', width=size1[0], height=size1[1],
-                                command=lambda: self.show_frame(SignupPage))
-
-
-        self.navbar.grid(row=0, column=0, sticky='nesw')
-
-        self.frames = {}
-        self.show_frame(HomePage)
-
-
-    def log_out(self):
-        self.User = 'Guest'
-        self.show_frame(HomePage)
-
-    def refresh_navbar(self):
-        for button in self.buttons.winfo_children():
-            button.grid_forget()
-        self.exit_button.grid()
-
-    def show_frame(self, frame_class):
-        """Destroy and recreate the frame every time it's called to ensure a fresh state."""
-
-        # Destroy the existing frame if it already exists
-        if frame_class in self.frames:
-            self.frames[frame_class].destroy()
-            del self.frames[frame_class]
-
-        # refresh the navbar
-        self.refresh_navbar()
-
-        # Create a new instance of the frame
-        frame = frame_class(self.container, self)
-        self.frames[frame_class] = frame
-        frame.grid(row=1, column=0, sticky="nsew")
-
-        # Bring the new frame to the front
-        frame.tkraise()
 
 
 class LoginPage(tk.Frame):
@@ -96,15 +16,12 @@ class LoginPage(tk.Frame):
         self.grid_rowconfigure(1, weight=1)
         self.grid_rowconfigure(2, weight=8)
 
-
         # Create and place the username label and entry
         self.frame = tk.Frame(self, background='lightblue')
-
 
         self.label1 = tk.Label(self, text="welcome to DoodleGuess", height=4, background='lightblue',
                           font=('TkDefaultFont', 16))
         self.label1.grid(row=1, column=0, sticky='n')
-
 
         self.username_label = tk.Label(self.frame, text="Username:")
         self.username_label.grid(row=1, column=0, padx=10, pady=5, sticky="sw")
@@ -116,7 +33,6 @@ class LoginPage(tk.Frame):
         self.password_label.grid(row=3, column=0, padx=10, pady=5, sticky="nw")
         self.password_entry = tk.Entry(self.frame, show="*")
         self.password_entry.grid(row=4, column=0, padx=10, pady=5, sticky='nw')
-
 
         def login():
             username = self.username_entry.get()
@@ -135,7 +51,7 @@ class LoginPage(tk.Frame):
                     }
                 }
                 hash = hashlib.sha256(json.dumps(request).encode()).hexdigest()
-                request['verify'] = hash
+                request['Checksum'] = hash
                 result = send_data(client_socket, json.dumps(request).encode())
                 status = result['status']
 
@@ -173,9 +89,9 @@ class SignupPage(tk.Frame):
         self.grid_rowconfigure(1, weight=3)
         self.grid_rowconfigure(2, weight=3)
 
-
         self.label1 = tk.Label(self, text="Create a new user", height=4, background='lightblue',
-                          font=('TkDefaultFont', 16))
+                               font=('TkDefaultFont', 16))
+
         self.label1.grid(row=0, column=0)
 
         self.frame = tk.Frame(self, bg='lightblue')
@@ -192,12 +108,11 @@ class SignupPage(tk.Frame):
         self.password_entry = tk.Entry(self.frame, show="*")
         self.password_entry.grid(row=1, column=1, padx=10, pady=5, sticky="w")
 
-        # Create and place the confirm password label and entry
+        # Create and place the confirm_password label and entry
         self.confirm_password_label = tk.Label(self.frame, text="Confirm Password:")
         self.confirm_password_label.grid(row=2, column=0, padx=10, pady=5, sticky="e")
         self.confirm_password_entry = tk.Entry(self.frame, show="*")
         self.confirm_password_entry.grid(row=2, column=1, padx=10, pady=5, sticky="w")
-
 
         # Create and place the signup button
         self.signup_button = tk.Button(self.frame, text="Signup", command=self.register_user)
@@ -261,13 +176,11 @@ class HomePage(tk.Frame):
         else:
             self.controller.logout.grid(row=0, column=1)
 
-        self.label = tk.Label(self, text=f"welcome to DoodleGuess, {self.controller.User}", height=4, background='lightblue',
-                          font=('TkDefaultFont', 16))
-
+        self.label = tk.Label(self, text=f"welcome to DoodleGuess, {self.controller.User}", height=4,
+                              background='lightblue', font=('TkDefaultFont', 16))
 
         self.join_button = tk.Button(self, text="Play", width=2*size1[0], height=2*size1[1],
-                                command=self.join)
-
+                                     command=self.join)
 
         self.label.grid(row=1, column=0, sticky='n')
         self.join_button.grid(row=2, column=0, sticky='n')
@@ -277,6 +190,7 @@ class HomePage(tk.Frame):
             pass
         else:
             self.controller.show_frame(Temp1)
+
 
 class Temp1(tk.Frame):
     def __init__(self, parent, controller):
@@ -288,7 +202,7 @@ class Temp1(tk.Frame):
         join_button.grid(row=0, column=0)
 
         create_button = tk.Button(self,text='Create Lobby', width=2 * size1[0], height=2 * size1[1],
-                                  command=lambda:self.controller.show_frame(LobbyCreate))
+                                  command=lambda: self.controller.show_frame(LobbyCreate))
         create_button.grid(row=0, column=1)
 
     def join(self):
@@ -300,16 +214,21 @@ class Temp1(tk.Frame):
         label = tk.Label(self, text='enter lobby code')
         entry = tk.Entry(self,)
 
+
 class LobbyCreate(tk.Frame):
     def __init__(self, parent, controller):
         super().__init__(parent)
         self.controller = controller
         self.config(background='lightblue')
 
+        self.grid_columnconfigure(0, weight=1)
+        self.grid_rowconfigure(0, weight=1)
+        self.grid_rowconfigure(1, weight=3)
+        self.grid_rowconfigure(2, weight=3)
+
         self.Title = tk.Label(self, text='Choose lobby Settings', font=('TkDefaultFont', 16))
         self.Title.grid()
         self.mFrame = tk.Frame(self)
-
 
         self.label1 = tk.Label(self.mFrame, text='Players:')
         self.label1.grid(row=0, column=0)
@@ -327,14 +246,12 @@ class LobbyCreate(tk.Frame):
 
         self.create_lobby_button = tk.Button(self, text='create lobby', width=2 * size1[0], height=2 * size1[1],
                                              command=self.create_lobby)
-        self.create_lobby_button.grid(row=2, column=0)
-
+        self.create_lobby_button.grid(row=2, column=0, sticky='n')
 
     def create_lobby(self):
         host = self.controller.User
         max_players = self.select_player.get()
         time_limit = self.time_entry.get()
-
 
         if not self.select_player.get():
             return False
@@ -345,10 +262,9 @@ class LobbyCreate(tk.Frame):
             time_limit = int(time_limit)
             if time_limit < 30 or time_limit > 90:
                 return False
-        except exception as e:
+        except Exception as e:
             print(e)
             return False
-
 
         request = {
             'request': 'create_lobby',
@@ -358,10 +274,9 @@ class LobbyCreate(tk.Frame):
                 'time_limit': time_limit
             }
         }
-        hash = hashlib.sha256(json.dumps(request).encode()).hexdigest()
-        request['verify'] = hash
+        checksum = hashlib.sha256(json.dumps(request).encode()).hexdigest()
+        request['checksum'] = checksum
         result = send_data(client_socket, json.dumps(request).encode())
-
 
 
 class LobbyPage(tk.Frame):
@@ -380,6 +295,7 @@ class LobbyPage(tk.Frame):
         waiting = True
         f_players = tk.Frame(self, bg='grey')
 
+
 class GameBoard(tk.Frame):
     def __init__(self, parent, controller):
         super().__init__(parent)
@@ -387,54 +303,3 @@ class GameBoard(tk.Frame):
         self.config(background='lightblue')
 
         canvas = tk.Canvas(self,)
-
-
-# data is json
-def send_data(soc, data):
-
-    try:
-        # Step 1: Send the message length first (4 bytes)
-        soc.send(struct.pack("!I", len(data)))
-
-        # Step 2: Send the actual JSON data
-        soc.sendall(data)
-
-
-        # Receive response length first
-        response_length_data = soc.recv(4)
-        response_length = struct.unpack("!I", response_length_data)[0]
-        print(f"Expecting {response_length} bytes...")
-
-        # Receive full response data
-        response_data = b""
-        while len(response_data) < response_length:
-            chunk = soc.recv(response_length - len(response_data))
-            if not chunk:
-                break
-            response_data += chunk
-
-        response = json.loads(response_data.decode('utf-8'))
-        print(response)
-        return response
-    except Exception as e:
-        return {
-           'status': 'communication error',
-            'data': {
-                'msg': 'something went wrong, try again'
-            }
-        }
-
-
-
-if __name__ == '__main__':
-    host = "127.0.0.1"  # Server IP address
-    port = 65432  # Server port
-
-    client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    client_socket.connect((host, port))  # Connect to server
-    print(f"Connected to server at {host}:{port}")
-
-    app = App()
-    app.mainloop()
-
-    client_socket.close()
