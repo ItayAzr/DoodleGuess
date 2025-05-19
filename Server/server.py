@@ -52,6 +52,7 @@ class Server:
                     if request is not None:
                         status = ''
                         msg = ''
+                        data = None
 
                         if request['request'] == 'login':
                             msg, status = self.confirm_login(request['data']['username'], request['data']['password'])
@@ -60,18 +61,18 @@ class Server:
                             msg, status = self.create_user(request['data']['username'],  request['data']['password'])
 
                         if request['request'] == 'create_lobby':
-                            msg, status = self.create_lobby(request['data'], user)
+                            msg, status, data= self.create_lobby(request['data'], user)
 
                         if request['request'] == 'get_lobby_list':
                             msg, status, data = self.get_lobby_list()
 
                         if request['request'] == 'join_lobby':
-                            msg, status = self.join_lobby(request['data']['lobby_id'], user)
+                            msg, status, data = self.join_lobby(request['data']['lobby_id'], user)
 
                         if request['request'] == 'game':
                             self.game_broadcast(request['data'], user)
 
-                        user.send_response(status, msg)
+                        user.send_response(status, msg, data)
                     else:
                         break
 
@@ -79,12 +80,22 @@ class Server:
             print(e)
 
         finally:
+            if user.lobby is not None:
+                self.check_empty_lobby(user.lobby.id)
             # When client disconnects, remove them from active list
             if user in self.active_users:
                 self.active_users.remove(user)
                 print(f"User {user.data['username']} disconnected. Active players: {len(self.active_users)}")
 
             user.connection.close()
+
+    def check_empty_lobby(self, lobby_id):
+        for lobby in self.lobbies:
+            if lobby.id == lobby_id:
+                if len(lobby.playerList) == 0:
+                    self.lobbies.remove(lobby)
+                    print('deleted empty lobby')
+                    break
 
     def initial_key_exchange(self, user: User, manager: KeyManager):
         try:
@@ -107,7 +118,7 @@ class Server:
             return False
 
     # game related methods:
-    def game_broadcast(self, user: User, data):
+    def game_broadcast(self, data, user: User):
         lobby_id = data['lobby_id']
         for lobby in self.lobbies:
             if lobby.id == lobby_id:
@@ -134,8 +145,11 @@ class Server:
         for lobby in self.lobbies:
             if lobby.id == lobby_id:
                 if lobby.add_player():
-                    return f'joined {lobby.host.data["username"]}\'s lobby', 'success'
-                return 'joining lobby failed', 'failed'
+                    data = {'lobby': base64.b64encode(pickle.dumps(lobby))}
+                    user.lobby = lobby
+                    return f'joined {lobby.host.data["username"]}\'s lobby', 'success', data
+                return 'joining lobby failed', 'failed', None
+
     # creates a new lobby
     def create_lobby(self, data: dict, user: User):
         try:
@@ -144,7 +158,7 @@ class Server:
                 if lobby.id == lobby_id:
                     lobby_id += 1
             settings = data.values()
-            host = user
+            host = user.data['username']
             max_players = data['max_players']
             time_limit = data['time_limit']
             rounds = data['rounds']
@@ -153,10 +167,11 @@ class Server:
             print(f'lobby setting: {settings}')
             lobby = Lobby(lobby_id, host, max_players, time_limit, rounds, difficulty)
             self.lobbies.append(lobby)
-            return 'lobby created', 'success'
+            user.lobby = lobby
+            return 'lobby created', 'success', {'lobby': base64.b64encode(pickle.dumps(lobby)).decode()}
         except Exception as e:
             print(e)
-            return 'lobby creation failed', 'failed'
+            return 'lobby creation failed', 'failed', None
 
     # Database related methods:
 

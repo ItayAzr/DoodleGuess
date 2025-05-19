@@ -1,6 +1,7 @@
 import base64
 import hashlib
 import os
+import pickle
 import socket
 import json
 import struct
@@ -86,9 +87,8 @@ class Client:
         encrypted = base64.b64encode(nonce + ciphertext).decode("utf-8")
         return encrypted
 
-
     def listen(self):
-        while self.Lobby.GIM:
+        while True:
             # Receive response length first
             print('waiting for response from the server...')
             response_length_data = self.soc.recv(4)
@@ -105,7 +105,6 @@ class Client:
                 response_data += chunk
 
             return self.decrypt_message(response_data)
-
 
 
     def send_data(self, request: dict, encrypt: bool = True):
@@ -162,6 +161,11 @@ class Client:
             else:
                 print(2)
                 return None
+
+    def set_lobby(self, lobby):
+        print(pickle.loads(lobby))
+        self.Lobby = pickle.loads(lobby)
+        print(self.Lobby)
 
     @staticmethod
     def create_request(action: str, data: dict = None) -> dict:

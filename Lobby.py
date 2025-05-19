@@ -1,13 +1,12 @@
 import threading
 
 import requests
-from Server import User
 import random
 import tkinter as tk
 
 
 class Lobby:
-    def __init__(self, lobby_id: int, host: User, max_players: int, time_limit: int, rounds: int, difficulty: str):
+    def __init__(self, lobby_id: int, host: str, max_players: int, time_limit: int, rounds: int, difficulty: str):
         self.id = lobby_id
         self.host = host
         self.max = max_players
@@ -15,57 +14,81 @@ class Lobby:
         self.difficulty = difficulty
         self.rounds = rounds
         self.waiting = True
-        self.GIM = False # GIM -> Game In Process
+        self.GIM = False  # GIM -> Game In Process
         self.status = 'waiting for players'
         self.playerList = [host]
         self.scores = {
-            self.host.data['username']: 0
+            self.host: 0
         }
         self.full = False
-        self.player_frame = tk.Frame()  # for the client
+
 
     def game_loop(self):
         for round in range(self.rounds):
             for player in self.playerList:
                 word = self.get_draw_word()
 
-    def update_player_frame(self):
-        for frame in self.player_frame.winfo_children():
-            frame.destroy()
-
+    def update_player_frame(self) -> tk.Frame:
+        player_frame = tk.Frame()
         for player in self.playerList:
-            frame = tk.Frame(self.player_frame, bg='white')
+            frame = tk.Frame(player_frame, bg='white')
             if player == self.host:
                 frame.config(bg='yellow')
-            name = player.data['username']
+            name = player
             player_label = tk.Label(frame, text=f'{name}, score: {self.scores[player]}')
-            player_label.grid()
+            player_label.pack()
             frame.pack()
+        return player_frame
 
-    def remove_player(self, player: User):
-        if player in self.playerList:
-            self.playerList.pop()
-        if player.data['username'] in self.scores.keys():
-            self.scores.pop(player.data['username'])
+
+    def remove_player(self, username):
+        for player in self.playerList:
+            if player == username:
+                self.playerList.pop()
+            if player in self.scores:
+                self.scores.pop(player)
+            if player == self.host:
+                return self.update_host()
         self.update_player_frame()
+        return None
 
     def check_user(self, user):
         for player in self.playerList:
             if player == user:
-                return player, self.scores[player.data['username']]
+                return player, self.scores[player]
         return False
 
-    def add_player(self, player: User) -> bool:
+    def add_player(self, player) -> bool:
         if not self.full:
             if not self.check_user(player):
                 self.playerList.append(player)
-                self.scores[player.data['username']] = 0
+                self.scores[player] = 0
                 if len(self.playerList) >= self.max:
                     self.full = True
                 self.update_player_frame()
                 return True
         else:
             return False
+
+    def update(self, data: dict):
+        for key in data:
+            if key == 'host':
+                for player in self.playerList:
+                    if player == data[key]:
+                        self.host = player
+            if key == 'scores':
+                for score in self.scores:
+                    self.scores[score] += data['scores'][score]
+            if key == 'remove_player':
+                self.remove_player(data[key])
+            if key == 'start_game':
+                self.GIM = True
+
+    def update_host(self):
+        self.playerList.remove(self.host)
+        new_host = random.choice(self.playerList)
+        self.host = new_host
+        return new_host
 
     def get_draw_word(self):
         # Topics and filters by difficulty level

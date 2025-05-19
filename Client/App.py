@@ -1,3 +1,5 @@
+import base64
+import pickle
 import threading
 import tkinter as tk
 from tkinter import ttk, colorchooser, messagebox
@@ -355,12 +357,12 @@ class LobbyCreate(tk.Frame):
         self.select_rounds.grid(row=2, column=1)
 
         self.label4 = tk.Label(self.mFrame, text="difficulty")
-        self.label4.grid(row=3, column=0)
+        self.label4.grid(row=3, column=0,)
 
         self.select_difficulty = ttk.Combobox(self.mFrame, values=['easy', 'medium', 'hard'])
         self.select_difficulty.grid(row=3, column=1)
 
-        self.mFrame.grid(row=2, column=0)
+        self.mFrame.grid(row=2, column=0, sticky='n')
 
         self.create_lobby_button = tk.Button(self, text='create lobby', width=2 * size1[0], height=2 * size1[1],
                                              command=self.create_lobby)
@@ -394,7 +396,8 @@ class LobbyCreate(tk.Frame):
         msg = ''
         if result is not None:
             if result['status'] == 'success':
-                self.controller.show_frame(LoginPage)
+                self.controller.client.set_lobby(base64.b64decode(result['data']['lobby'].encode()))
+                self.controller.show_frame(LobbyPage)
             elif result['status'] == 'failed':
                 msg = result['data']['msg']
         else:
@@ -409,16 +412,37 @@ class LobbyPage(tk.Frame):
         self.controller = controller
         self.config(background='lightblue')
 
-        self.grid_rowconfigure(0, weight=1)
-        self.grid_rowconfigure(1, weight=2)
-        self.grid_rowconfigure(2, weight=4)
-        self.grid_columnconfigure(0, weight=1)
         self.start_button = tk.Button(self,  width=2*size1[0], height=2*size1[1])
-        self.f_players = self.controller.client.Lobby.player_frame
-        self.f_players.config(root=self)
 
-        if self.controller.client.lobby.host['username'] == self.controller.client.username:
-            self.start_button.grid()
+        self.f_players = self.controller.client.Lobby.update_player_frame()
+
+        self.f_players.pack()
+
+        if self.controller.client.Lobby.host == self.controller.client.username:
+            self.start_button.pack()
+
+        self.run()
+    def run(self):
+        while True:
+            try:
+                message = self.controller.client.listen()
+                action = message['data'].pop('action')
+                if action == 'update':
+                    self.controller.client.Lobby.update(message['data'])
+                if self.controller.client.Lobby.GIM:
+                    self.controller.show_frame(GameBoard)
+            except Exception as e:
+             print(e)
+
+    def start(self):
+        self.controller.client.Lobby.GIM = True
+        data = {
+            'action': 'update',
+            'start_game': True
+        }
+        request = self.controller.client.create_request('game', data)
+        self.controller.client.send_data(request)
+        self.controller.show_frame(GameBoard)
 
 
 class GameBoard(tk.Frame):
@@ -468,6 +492,7 @@ class GameBoard(tk.Frame):
         self.run()
 
     def run(self):
+        self.controller.client.Lobby.game_loop()
         while True:
             message = self.controller.client.listen()
             if message['turn'] == 'yes':

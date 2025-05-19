@@ -18,6 +18,7 @@ class User:
         :param con: the socket connection with the client
         :param data: other data that connected to the client, the data will be saved in the data collection.
         """
+        self.lobby = None
         self.connection = con
         self.address = address
         self.data = data
