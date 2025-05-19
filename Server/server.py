@@ -137,7 +137,7 @@ class Server:
                     return f'joined {lobby.host.data["username"]}\'s lobby', 'success'
                 return 'joining lobby failed', 'failed'
     # creates a new lobby
-    def create_lobby(self, data, user: User):
+    def create_lobby(self, data: dict, user: User):
         try:
             lobby_id = 1
             for lobby in self.lobbies:
@@ -145,12 +145,13 @@ class Server:
                     lobby_id += 1
             settings = data.values()
             host = user
-            max_players = settings[0]
-            time_limit = settings[1]
-            difficulty = settings[2]
+            max_players = data['max_players']
+            time_limit = data['time_limit']
+            rounds = data['rounds']
+            difficulty = data['difficulty']
 
             print(f'lobby setting: {settings}')
-            lobby = Lobby(lobby_id, host, max_players, time_limit, difficulty)
+            lobby = Lobby(lobby_id, host, max_players, time_limit, rounds, difficulty)
             self.lobbies.append(lobby)
             return 'lobby created', 'success'
         except Exception as e:

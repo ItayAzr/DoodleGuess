@@ -348,34 +348,44 @@ class LobbyCreate(tk.Frame):
         self.select_time = ttk.Combobox(self.mFrame, values=['30', '45', '60', '75', '90', '105', '120'])
         self.select_time.grid(row=1, column=1)
 
-        self.label3 = tk.Label(self.mFrame, text="Time Limit (30 - 90 sec):")
+        self.label3 = tk.Label(self.mFrame, text="number of rounds")
         self.label3.grid(row=2, column=0)
 
+        self.select_rounds = ttk.Combobox(self.mFrame, values=['2', '3', '4', '5'])
+        self.select_rounds.grid(row=2, column=1)
+
+        self.label4 = tk.Label(self.mFrame, text="difficulty")
+        self.label4.grid(row=3, column=0)
+
         self.select_difficulty = ttk.Combobox(self.mFrame, values=['easy', 'medium', 'hard'])
-        self.select_difficulty.grid(row=2, column=1)
+        self.select_difficulty.grid(row=3, column=1)
 
         self.mFrame.grid(row=2, column=0)
 
         self.create_lobby_button = tk.Button(self, text='create lobby', width=2 * size1[0], height=2 * size1[1],
                                              command=self.create_lobby)
-        self.create_lobby_button.grid(row=2, column=0, sticky='n')
+        self.create_lobby_button.grid(row=3, column=0, sticky='n')
         self.error_label = None
 
     def create_lobby(self):
         max_players = self.select_player.get()
         time_limit = self.select_time.get()
+        rounds = self.select_rounds.get()
         difficulty = self.select_difficulty.get()
 
         if not self.select_player.get():
             max_players = 5
         if not time_limit:
             time_limit = '60'
+        if not rounds:
+            rounds = '3'
         if not difficulty:
             difficulty = 'medium'
 
         data = {
             'max_players': max_players,
             'time_limit': time_limit,
+            'rounds': rounds,
             'difficulty': difficulty
         }
 
