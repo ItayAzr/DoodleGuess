@@ -421,7 +421,8 @@ class LobbyPage(tk.Frame):
         if self.controller.client.Lobby.host == self.controller.client.username:
             self.start_button.pack()
 
-        self.run()
+        thread = threading.Thread(target=self.run)
+        thread.start()
 
     def run(self):
         while True:
@@ -432,6 +433,7 @@ class LobbyPage(tk.Frame):
                     self.controller.client.Lobby.update(message['data'])
                 if self.controller.client.Lobby.GIM:
                     self.controller.show_frame(GameBoard)
+                    break
             except Exception as e:
                 print(e)
 

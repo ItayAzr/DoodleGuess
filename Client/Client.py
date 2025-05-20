@@ -49,7 +49,6 @@ class Client:
 
             print(e)
 
-
     def decrypt_message(self, encrypted_data: bytes):
         """
         Decrypts a base64-encoded JSON message (nonce + ciphertext + tag).
@@ -105,7 +104,6 @@ class Client:
                 response_data += chunk
 
             return self.decrypt_message(response_data)
-
 
     def send_data(self, request: dict, encrypt: bool = True):
         """
