@@ -10,7 +10,7 @@ import socket
 import pickle
 
 class Server:
-    def __init__(self, host="127.0.0.1", port=65432, max_clients=20):
+    def __init__(self, host="127.0.0.1", port=65432, max_clients: int = 20):
         self.host = host  # Localhost
         self.port = port  # Arbitrary non-privileged port
         self.max_clients = max_clients
@@ -195,7 +195,7 @@ class Server:
         for lobby in self.lobbies:
             if lobby.id == lobby_id:
                 if lobby.add_player(user.get_data('username')):
-                    data = {'lobby': base64.b64encode(pickle.dumps(lobby))}
+                    data = {'lobby': base64.b64encode(pickle.dumps(lobby)).decode()}
                     user.lobby = lobby
                     return f'joined {lobby.host}\'s lobby', 'success', data
                 return 'joining lobby failed', 'failed', None
@@ -209,9 +209,9 @@ class Server:
                     lobby_id += 1
             settings = data.values()
             host = user.get_data('username')
-            max_players = data['max_players']
-            time_limit = data['time_limit']
-            rounds = data['rounds']
+            max_players = int(data['max_players'])
+            time_limit = int(data['time_limit'])
+            rounds = int(data['rounds'])
             difficulty = data['difficulty']
 
             print(f'lobby setting: {settings}')

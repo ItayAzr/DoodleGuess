@@ -134,18 +134,7 @@ class Client:
         print(f"Expecting {response_length} bytes...")
 
         # Receive full response data
-        response_data = b""
-        while len(response_data) < response_length:
-            chunk = self.soc.recv(response_length - len(response_data))
-            if not chunk:
-                break
-            response_data += chunk
-        if not encrypt:
-            response = json.loads(response_data.decode('utf-8'))
-        else:
-            response = self.decrypt_message(response_data)
-
-        print(f'response: type {type(response)}, {response} \n')
+        response = self.listen()
 
         if 'checksum' not in response.keys():
             print(1)

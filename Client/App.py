@@ -302,7 +302,7 @@ class JoinLobby(tk.Frame):
         self.refresh()
         self.lobbies_frame.grid(row=0, column=0, sticky='n')
 
-        self.refresh_button = tk.Button(self, text='refresh')
+        self.refresh_button = tk.Button(self, text='refresh', command=self.refresh)
         self.refresh_button.grid(row=1, column=0, sticky='n')
 
     def refresh(self):
@@ -340,7 +340,7 @@ class JoinLobby(tk.Frame):
             messagebox.showerror("Error", "couldn't join lobby")
             self.refresh()
         else:
-            self.controller.client.Lobby = response['lobby']
+            self.controller.client.set_lobby = base64.b64decode(response['lobby'].encode())
 
 
 class LobbyCreate(tk.Frame):
@@ -361,7 +361,7 @@ class LobbyCreate(tk.Frame):
         self.label.grid(row=1)
         self.mFrame = tk.Frame(self)
 
-        self.label1 = tk.Label(self.mFrame, text='Players:')
+        self.label1 = tk.Label(self.mFrame, text='Max Players:')
         self.label1.grid(row=0, column=0)
 
         self.select_player = ttk.Combobox(self.mFrame, values=['2', '3', '4', '5', '6', '7', '8', '9', '10'])
