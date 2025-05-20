@@ -194,7 +194,7 @@ class Server:
     def join_lobby(self, lobby_id, user: User):
         for lobby in self.lobbies:
             if lobby.id == lobby_id:
-                if lobby.add_player():
+                if lobby.add_player(user.get_data('username')):
                     data = {'lobby': base64.b64encode(pickle.dumps(lobby))}
                     user.lobby = lobby
                     return f'joined {lobby.host}\'s lobby', 'success', data

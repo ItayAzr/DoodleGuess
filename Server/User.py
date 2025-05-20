@@ -44,7 +44,7 @@ class User:
             encrypted = base64.b64encode(nonce + ciphertext).decode("utf-8")
             return encrypted
         except Exception as e:
-            print('e')
+            print(e)
             return None
 
     def decrypt_message(self, encrypted_data: bytes):
@@ -120,9 +120,7 @@ class User:
             print(type(data))
 
             if 'aes_key' in self.data.keys():
-                print(1)
                 request = self.decrypt_message(data)
-                print(type(request))
             else:
                 request = json.loads(data.decode('utf-8'))
             print(f'request: {request}')

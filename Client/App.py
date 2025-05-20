@@ -261,25 +261,33 @@ class HomePage(tk.Frame):
 class LobbyActions(tk.Frame):
     def __init__(self, parent, controller):
         super().__init__(parent)
+
         self.controller = controller
         self.config(background='lightblue')
 
         join_button = tk.Button(self, text="Join Lobby", width=2 * size1[0], height=2 * size1[1],
-                                command=lambda: self.controller.show_frame(JoinLobby))
+                                command=self.join)
         join_button.grid(row=0, column=0)
 
-        create_button = tk.Button(self,text='Create Lobby', width=2 * size1[0], height=2 * size1[1],
+        create_button = tk.Button(self, text='Create Lobby', width=2 * size1[0], height=2 * size1[1],
                                   command=lambda: self.controller.show_frame(LobbyCreate))
         create_button.grid(row=0, column=1)
 
-    def join(self):
-        # clear the page
-        for button in self.winfo_children():
-            button.grid_forget()
+        self.error_label = None
 
-        # add the join stuff
-        label = tk.Label(self, text='enter lobby code')
-        entry = tk.Entry(self,)
+    def join(self):
+        request = self.controller.client.create_request('get_lobby_list')
+        result = self.controller.client.send_data(request)
+        msg = ''
+        if result is not None:
+            if result['status'] == 'list sent':
+                self.controller.show_frame(JoinLobby)
+            elif result['status'] == 'error':
+                msg = result['data']['msg']
+        else:
+            msg = 'something went wrong. please try again'
+        self.error_label = tk.Label(self, bg='lightblue', text=msg, fg='red', )
+        self.error_label.grid(row=3, column=0, padx=10, pady=5, sticky='n')
 
 
 class JoinLobby(tk.Frame):
@@ -288,25 +296,40 @@ class JoinLobby(tk.Frame):
         self.controller = controller
         self.config(background='lightblue')
 
+        self.grid_rowconfigure(0, weight=4)
+        self.grid_rowconfigure(1, weight=1)
         self.lobbies_frame = tk.Frame(self)
+        self.refresh()
+        self.lobbies_frame.grid(row=0, column=0, sticky='n')
 
-        self.refresh_button = tk.Button(self)
+        self.refresh_button = tk.Button(self, text='refresh')
+        self.refresh_button.grid(row=1, column=0, sticky='n')
 
     def refresh(self):
         for frame in self.lobbies_frame.winfo_children():
             frame.destroy()
 
         request = self.controller.client.create_request('get_lobby_list')
-        lobby_list = self.controller.client.send_data(request)
+        lobby_list = self.controller.client.send_data(request)['data']['lobby_list']
 
+        row = 0
+        column = 0
         for lobby in lobby_list:
+            print(1)
             frame = tk.Frame(self.lobbies_frame)
-            label = tk.Label(frame, text=f'{lobby(1)}\'s lobby, {lobby(2)}/{lobby(3)} players')
-            label.pack()
-            button = tk.Button(frame, text='join', command=lambda: self.join(lobby(0)))
-            frame.pack()
+            label = tk.Label(frame, text=f'{lobby[1]}\'s lobby, {lobby[2]}/{lobby[3]} players')
+            label.grid()
+            button = tk.Button(frame, text='join', command=lambda: self.join_lobby(lobby[0]))
+            button.grid(row=1, column=0, sticky='n')
+            frame.grid(row=row, column=column, sticky='nesw')
+            if column < 5:
+                column += 1
+            elif column >= 5:
+                column = 0
+                row += 1
+            print(2)
 
-    def join(self, lobby_id):
+    def join_lobby(self, lobby_id):
         data = {
             'lobby_id': lobby_id,
             "action": "clear"
