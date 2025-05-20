@@ -86,7 +86,7 @@ class Client:
         encrypted = base64.b64encode(nonce + ciphertext).decode("utf-8")
         return encrypted
 
-    def listen(self):
+    def listen(self, encrypt: bool = True):
         while True:
             # Receive response length first
             print('waiting for response from the server...')
@@ -102,8 +102,9 @@ class Client:
                 if not chunk:
                     break
                 response_data += chunk
-
-            return self.decrypt_message(response_data)
+            if encrypt:
+                return self.decrypt_message(response_data)
+            return json.loads(response_data.decode('utf-8'))
 
     def send_data(self, request: dict, encrypt: bool = True):
         """
