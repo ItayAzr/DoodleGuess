@@ -1,4 +1,6 @@
 import base64
+import time
+
 from Server.User import User
 from Server.KeyManager import KeyManager
 from Lobby import Lobby
@@ -45,8 +47,8 @@ class Server:
     # handles client requests
     def handle_client(self, user: User, manager: KeyManager):
         try:
-            print(f"New connection from {user.data['username']} \n")
-            if self.initial_key_exchange(user, manager):
+            print(f"New connection from {user.get_data('username')} \n")
+            if self.key_exchange(user, manager):
                 while True:
                     request = user.get_request()
                     if request is not None:
@@ -56,6 +58,8 @@ class Server:
 
                         if request['request'] == 'login':
                             msg, status = self.confirm_login(request['data']['username'], request['data']['password'])
+                            if status == 'success':
+                                user.set_data('username', request['data']['username'])
 
                         if request['request'] == 'signup':
                             msg, status = self.create_user(request['data']['username'],  request['data']['password'])
@@ -68,6 +72,9 @@ class Server:
 
                         if request['request'] == 'join_lobby':
                             msg, status, data = self.join_lobby(request['data']['lobby_id'], user)
+
+                        if request['request'] == 'start_game':
+                            msg, status = self.start_game(request['data'], user)
 
                         if request['request'] == 'game':
                             self.game_broadcast(request['data'], user)
@@ -85,19 +92,12 @@ class Server:
             # When client disconnects, remove them from active list
             if user in self.active_users:
                 self.active_users.remove(user)
-                print(f"User {user.data['username']} disconnected. Active players: {len(self.active_users)}")
+                print(f"User {user.get_data('username')} disconnected. Active players: {len(self.active_users)}")
 
             user.connection.close()
 
-    def check_empty_lobby(self, lobby_id):
-        for lobby in self.lobbies:
-            if lobby.id == lobby_id:
-                if len(lobby.playerList) == 0:
-                    self.lobbies.remove(lobby)
-                    print('deleted empty lobby')
-                    break
-
-    def initial_key_exchange(self, user: User, manager: KeyManager):
+    @staticmethod
+    def key_exchange(user: User, manager: KeyManager):
         try:
             while True:
                 request = user.get_request()
@@ -110,7 +110,7 @@ class Server:
                     encrypted_key = base64.b64decode(request['data']['encrypted_key'].encode('utf-8'))
                     decrypted_key = manager.decypher_aes_key(encrypted_key)
                     user.send_response('key received', 'encrypted key received')
-                    user.data['aes_key'] = decrypted_key
+                    user.set_data('aes_key', decrypted_key)
                     print('Keys exchanged')
                     return True
         except Exception as e:
@@ -118,15 +118,65 @@ class Server:
             return False
 
     # game related methods:
-    def game_broadcast(self, data, user: User):
-        lobby_id = data['lobby_id']
+
+    def start_game(self, data: dict, user: User):
+        try:
+            if user.lobby.host == user.get_data('username'):
+                thread = threading.Thread(target=user.lobby.game_loop())
+                thread.start()
+                self.game_broadcast(data, user.lobby, user.get_data('username'))
+                return 'game started', 'success'
+
+            return 'user is not the host of the lobby', 'failed'
+
+        except Exception as e:
+            print(e)
+            return 'failed to start game', 'failed'
+
+    def game_loop(self, lobby: Lobby):
+        for game_round in range(lobby.rounds):
+            word = lobby.get_draw_word()
+
+            # chooses the drawer and sends the word and word length
+            for player in lobby.playerList:
+                for user in self.active_users:
+                    if user.get_data('username') == player:
+                        user.send_response({'turn': 'yes', 'data': {'word': word}})
+                    else:
+                        user.send_response({'turn': 'no', 'data': {'word_length': len(word)}})
+
+            start_time = time.time()
+            while time.time() - start_time <= lobby.time_limit:
+                time.sleep(0.1)
+
+    def check_empty_lobby(self, lobby_id):
         for lobby in self.lobbies:
             if lobby.id == lobby_id:
-                for player in lobby.playerList:
-                    if player == user:
-                        pass
+                if len(lobby.playerList) == 0:
+                    self.lobbies.remove(lobby)
+                    print('deleted empty lobby')
+                    break
+
+    def game_broadcast(self, data: dict, lobby: Lobby, sender: str, skip_sender: bool = False):
+        """
+        :param data: the data that the server broadcasts to the players.
+        :param lobby: the lobby of the player that sends the request
+        :param sender: username of the player that sends the request
+        :param skip_sender: whether to send broadcast back to the plater that requested it or not
+        :return: True if broadcast was completed successfully else, returns False
+        """
+        try:
+            for user in self.active_users:
+                if user.get_data('username') in lobby.playerList:
+                    if not skip_sender:
+                        user.send_response(data)
                     else:
-                        player.send_response(data)
+                        if not user.get_data('username') == sender:
+                            user.send_response(data)
+            return True
+        except Exception as e:
+            print(e)
+            return False
 
     # return a list of all available lobbies
     def get_lobby_list(self):
@@ -134,7 +184,7 @@ class Server:
             lobby_list = []
             for lobby in self.lobbies:
                 if not lobby.full:
-                    lobby_list.append((lobby.id, lobby.host.data['username'], len(lobby.playerList), lobby.max))
+                    lobby_list.append((lobby.id, lobby.host, len(lobby.playerList), lobby.max))
 
             return '', 'list sent', {'lobby_list': lobby_list}
         except Exception as e:
@@ -147,7 +197,7 @@ class Server:
                 if lobby.add_player():
                     data = {'lobby': base64.b64encode(pickle.dumps(lobby))}
                     user.lobby = lobby
-                    return f'joined {lobby.host.data["username"]}\'s lobby', 'success', data
+                    return f'joined {lobby.host}\'s lobby', 'success', data
                 return 'joining lobby failed', 'failed', None
 
     # creates a new lobby
@@ -158,7 +208,7 @@ class Server:
                 if lobby.id == lobby_id:
                     lobby_id += 1
             settings = data.values()
-            host = user.data['username']
+            host = user.get_data('username')
             max_players = data['max_players']
             time_limit = data['time_limit']
             rounds = data['rounds']
@@ -228,6 +278,9 @@ class Server:
     # login
     def confirm_login(self, username, password):
         try:
+            for user in self.active_users:
+                if user.get_data('username') == username:
+                    return 'user is already logged in', 'failed'
             with sqlite3.connect(self.Database) as connection:
 
                 cursor = connection.cursor()

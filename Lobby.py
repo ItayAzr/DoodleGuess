@@ -22,12 +22,6 @@ class Lobby:
         }
         self.full = False
 
-
-    def game_loop(self):
-        for round in range(self.rounds):
-            for player in self.playerList:
-                word = self.get_draw_word()
-
     def update_player_frame(self) -> tk.Frame:
         player_frame = tk.Frame()
         for player in self.playerList:
@@ -39,7 +33,6 @@ class Lobby:
             player_label.pack()
             frame.pack()
         return player_frame
-
 
     def remove_player(self, username):
         for player in self.playerList:

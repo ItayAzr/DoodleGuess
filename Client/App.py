@@ -422,6 +422,7 @@ class LobbyPage(tk.Frame):
             self.start_button.pack()
 
         self.run()
+
     def run(self):
         while True:
             try:
@@ -432,7 +433,7 @@ class LobbyPage(tk.Frame):
                 if self.controller.client.Lobby.GIM:
                     self.controller.show_frame(GameBoard)
             except Exception as e:
-             print(e)
+                print(e)
 
     def start(self):
         self.controller.client.Lobby.GIM = True
@@ -452,6 +453,9 @@ class GameBoard(tk.Frame):
         self.config(background='lightblue')
 
         self.can_draw = False
+        self.word = ''
+        self.word_len = 0
+        self.guess = ''
 
         # Default pen settings
         self.pen_color = "black"
@@ -473,6 +477,11 @@ class GameBoard(tk.Frame):
         self.size_slider = tk.Scale(tool_frame, from_=1, to=6, orient=tk.HORIZONTAL, label="Pen Size")
         self.size_slider.set(self.pen_width)
         self.size_slider.pack(pady=5)
+
+        self.guess_entry = tk.Entry(tool_frame, label="enter your guess")
+        self.guess_entry.pack(pady=5)
+
+        self.guess_button = tk.Button(self, text="Submit guess", command=self.set_guess)
 
         # Clear button
         clear_btn = tk.Button(tool_frame, text="Clear Canvas", command=self.clear_canvas)
@@ -497,8 +506,11 @@ class GameBoard(tk.Frame):
             message = self.controller.client.listen()
             if message['turn'] == 'yes':
                 self.can_draw = True
+                self.word = message['data']['word']
             else:
                 self.can_draw = False
+                self.word_len = message['data']['word_length']
+
             if message['data']['action'] == 'draw':
                 self.canvas.create_line(
                     message['data']['x1'], message['data']['y1'],
@@ -508,6 +520,12 @@ class GameBoard(tk.Frame):
                 )
             elif message['data']['action'] == 'clear':
                 self.canvas.delete("all")
+
+    def set_guess(self):
+        guess = self.guess_entry.get()
+        if not guess:
+            return None
+        self.guess = guess
 
     def eraser(self):
         self.pen_color = 'white'
