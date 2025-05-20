@@ -22,10 +22,12 @@ class Client:
         print(f"Connected to server at {host}:{port}")
 
     def get_public_key(self):
-        request = self.create_request('get public key')
-        response = self.send_data(request, False)
-        print(type(response['data']))
-        return response['data']['public_key']
+        while True:
+            request = self.create_request('get public key')
+            response = self.send_data(request, False)
+            print(type(response['data']))
+            if response['status'] == 'key sent':
+                return response['data']['public_key']
 
     def key_exchange(self):
         try:
@@ -127,18 +129,9 @@ class Client:
         self.soc.sendall(data)
         print('request sent')
 
-        # Receive response length first
-        print('waiting for response from the server...')
-        response_length_data = self.soc.recv(4)
-
-        response_length = struct.unpack("!I", response_length_data)[0]
-        print(f"Expecting {response_length} bytes...")
-
-        # Receive full response data
-        response = self.listen()
-
+        response = self.listen(encrypt)
+        print(f'response: {response}')
         if 'checksum' not in response.keys():
-            print(1)
             return None
         else:
             checksum = response['checksum']
@@ -147,7 +140,6 @@ class Client:
             if current_checksum == checksum:
                 return response
             else:
-                print(2)
                 return None
 
     def set_lobby(self, lobby):
