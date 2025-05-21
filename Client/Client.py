@@ -89,6 +89,7 @@ class Client:
         return encrypted
 
     def listen(self, encrypt: bool = True):
+        self.soc.settimeout(2)
         while True:
             try:
                 # Receive response length first
@@ -111,6 +112,9 @@ class Client:
             except ConnectionResetError as e:
                 print('connection to server closed')
                 return {'error': 'disconnected from server'}
+            finally:
+                self.soc.settimeout(None)
+
 
     def send_data(self, request: dict, encrypt: bool = True):
         """
