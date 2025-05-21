@@ -340,8 +340,7 @@ class JoinLobby(tk.Frame):
             messagebox.showerror("Error", "couldn't join lobby")
             self.refresh()
         else:
-            self.controller.client.set_lobby(base64.b64decode(response['data']['lobby'].encode()))
-            self.controller.show_frame(LobbyPage)
+            self.controller.client.set_lobby = base64.b64decode(response['lobby'].encode())
 
 
 class LobbyCreate(tk.Frame):

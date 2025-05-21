@@ -78,8 +78,8 @@ class Server:
 
                         if request['request'] == 'game':
                             self.game_broadcast(request['data'], user)
-                        else:
-                            user.send_response(status, msg, data)
+
+                        user.send_response(status, msg, data)
                     else:
                         break
 
@@ -119,25 +119,19 @@ class Server:
 
     # game related methods:
 
-
     def start_game(self, data: dict, user: User):
         try:
             if user.lobby.host == user.get_data('username'):
-                thread = threading.Thread(target=self.game_loop, args=user.lobby)
+                thread = threading.Thread(target=user.lobby.game_loop())
                 thread.start()
-                thread2 = threading.Thread(target=self.handle_player, args=user)
-                thread2.start()
-                self.game_broadcast(data, user)
+                self.game_broadcast(data, user.lobby, user.get_data('username'))
+                return 'game started', 'success'
+
+            return 'user is not the host of the lobby', 'failed'
+
         except Exception as e:
             print(e)
-
-    def handle_player(self, user: User):
-        while True:
-            try:
-                data = user.recv_game_data()
-                self.game_broadcast(data, user)
-            except Exception as e:
-                print(e)
+            return 'failed to start game', 'failed'
 
     def game_loop(self, lobby: Lobby):
         for game_round in range(lobby.rounds):
@@ -147,10 +141,10 @@ class Server:
             for player in lobby.playerList:
                 for user in self.active_users:
                     if user.get_data('username') == player:
-                        user.send_response('word chosen', '', {'turn': 'yes', 'word': word})
+                        user.send_response({'turn': 'yes', 'data': {'word': word}})
                     else:
-                        user.send_response('word length', '', {'turn': 'yes', 'word_length': len(word)})
-                    self.handle_player(user)
+                        user.send_response({'turn': 'no', 'data': {'word_length': len(word)}})
+
             start_time = time.time()
             while time.time() - start_time <= lobby.time_limit:
                 time.sleep(0.1)
@@ -163,24 +157,22 @@ class Server:
                     print('deleted empty lobby')
                     break
 
-    def game_broadcast(self, data: dict, sender: User):
+    def game_broadcast(self, data: dict, lobby: Lobby, sender: str, skip_sender: bool = False):
         """
-        :param user: the sender of the request
         :param data: the data that the server broadcasts to the players.
+        :param lobby: the lobby of the player that sends the request
+        :param sender: username of the player that sends the request
+        :param skip_sender: whether to send broadcast back to the plater that requested it or not
         :return: True if broadcast was completed successfully else, returns False
         """
         try:
-            skip_sender = bool(data.pop('skip'))
-            print(type(skip_sender))
-            print(data)
-            for player in sender.lobby.playerList:
-                for user in self.active_users:
-                    if user.get_data('username') in sender.lobby.playerList:
-                        if skip_sender:
-                            user.send_response('lobby data', 'lobby data sent', data)
-                        else:
-                            if player != user.get_data('username'):
-                                user.send_response('lobby data', 'lobby data sent', data)
+            for user in self.active_users:
+                if user.get_data('username') in lobby.playerList:
+                    if not skip_sender:
+                        user.send_response(data)
+                    else:
+                        if not user.get_data('username') == sender:
+                            user.send_response(data)
             return True
         except Exception as e:
             print(e)
@@ -203,9 +195,8 @@ class Server:
         for lobby in self.lobbies:
             if lobby.id == lobby_id:
                 if lobby.add_player(user.get_data('username')):
+                    data = {'lobby': base64.b64encode(pickle.dumps(lobby)).decode()}
                     user.lobby = lobby
-                    data = {'add_player': user.get_data('username'), 'lobby': base64.b64encode(pickle.dumps(lobby)).decode()}
-                    self.game_broadcast(data, lobby, user.get_data('username'), True)
                     return f'joined {lobby.host}\'s lobby', 'success', data
                 return 'joining lobby failed', 'failed', None
 

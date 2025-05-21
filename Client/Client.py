@@ -25,6 +25,7 @@ class Client:
         while True:
             request = self.create_request('get public key')
             response = self.send_data(request, False)
+            print(type(response['data']))
             if response['status'] == 'key sent':
                 return response['data']['public_key']
 
@@ -47,6 +48,7 @@ class Client:
             request = self.create_request('return encrypted key', data)
             self.send_data(request, False)
         except Exception as e:
+
             print(e)
 
     def decrypt_message(self, encrypted_data: bytes):
@@ -87,38 +89,24 @@ class Client:
         return encrypted
 
     def listen(self, encrypt: bool = True):
-        self.soc.settimeout(2)  # 5 second timeout
-        try:
-            while True:
-                try:
-                    print('waiting for response from the server...')
-                    response_length_data = self.soc.recv(4)
+        while True:
+            # Receive response length first
+            print('waiting for response from the server...')
+            response_length_data = self.soc.recv(4)
 
-                    response_length = struct.unpack("!I", response_length_data)[0]
-                    print(f"Expecting {response_length} bytes...")
+            response_length = struct.unpack("!I", response_length_data)[0]
+            print(f"Expecting {response_length} bytes...")
 
-                    response_data = b""
-                    while len(response_data) < response_length:
-                        print(2)
-                        chunk = self.soc.recv(response_length - len(response_data))
-                        if not chunk:
-                            break
-                        response_data += chunk
-
-                    if encrypt:
-                        return self.decrypt_message(response_data)
-                    return json.loads(response_data.decode('utf-8'))
-
-                except socket.timeout:
-                    print("Socket timed out while waiting for data.")
-                    return {'error': 'timeout'}
-
-        except ConnectionResetError as e:
-            print('connection to server closed')
-            return {'error': 'disconnected from server'}
-
-        finally:
-            self.soc.settimeout(None)  # Restore to blocking mode
+            # Receive full response data
+            response_data = b""
+            while len(response_data) < response_length:
+                chunk = self.soc.recv(response_length - len(response_data))
+                if not chunk:
+                    break
+                response_data += chunk
+            if encrypt:
+                return self.decrypt_message(response_data)
+            return json.loads(response_data.decode('utf-8'))
 
     def send_data(self, request: dict, encrypt: bool = True):
         """
@@ -142,9 +130,8 @@ class Client:
         print('request sent')
 
         response = self.listen(encrypt)
-
         print(f'response: {response}')
-        if 'checksum' not in response or 'error' in response:
+        if 'checksum' not in response.keys():
             return None
         else:
             checksum = response['checksum']
@@ -154,13 +141,6 @@ class Client:
                 return response
             else:
                 return None
-
-    def send_game_data(self, data: dict, ):
-        self.soc.sendall(json.dumps(data).encode('utf-8'))
-
-    def recv_game_data(self):
-        data = self.soc.recv(1024)
-        return json.loads(data.decode('utf-8'))
 
     def set_lobby(self, lobby):
         print(pickle.loads(lobby))
