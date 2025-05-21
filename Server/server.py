@@ -128,12 +128,8 @@ class Server:
                 thread2 = threading.Thread(target=self.handle_player, args=user)
                 thread2.start()
                 self.game_broadcast(data, user)
-            else:
-                return 'user is not the host of the lobby', 'failed'
-
         except Exception as e:
             print(e)
-            return 'failed to start game', 'failed'
 
     def handle_player(self, user: User):
         while True:
@@ -181,10 +177,10 @@ class Server:
                 for user in self.active_users:
                     if user.get_data('username') in sender.lobby.playerList:
                         if skip_sender:
-                            user.send_response('lobby data', '', data)
+                            user.send_response('lobby data', 'lobby data sent', data)
                         else:
                             if player != user.get_data('username'):
-                                user.send_response('lobby data', '', data)
+                                user.send_response('lobby data', 'lobby data sent', data)
             return True
         except Exception as e:
             print(e)
