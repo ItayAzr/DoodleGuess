@@ -74,6 +74,8 @@ class Lobby:
                     self.scores[score] += data['scores'][score]
             if key == 'remove_player':
                 self.remove_player(data[key])
+            if key == 'add_player':
+                self.add_player(data[key])
             if key == 'start_game':
                 self.GIM = True
 

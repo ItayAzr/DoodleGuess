@@ -197,6 +197,8 @@ class Server:
                 if lobby.add_player(user.get_data('username')):
                     data = {'lobby': base64.b64encode(pickle.dumps(lobby)).decode()}
                     user.lobby = lobby
+                    data = {'data': {'add_player': user.get_data('username')}}
+                    self.game_broadcast(data, lobby, user.get_data('username'), True)
                     return f'joined {lobby.host}\'s lobby', 'success', data
                 return 'joining lobby failed', 'failed', None
 
