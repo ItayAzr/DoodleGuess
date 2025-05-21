@@ -138,7 +138,7 @@ class Lobby:
                 if filtered_words:
                     return random.choice(filtered_words).lower()
                 else:
-                    return "house"
+                    return "no_word_found"
             else:
                 return "api_error"
 

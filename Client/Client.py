@@ -90,23 +90,27 @@ class Client:
 
     def listen(self, encrypt: bool = True):
         while True:
-            # Receive response length first
-            print('waiting for response from the server...')
-            response_length_data = self.soc.recv(4)
+            try:
+                # Receive response length first
+                print('waiting for response from the server...')
+                response_length_data = self.soc.recv(4)
 
-            response_length = struct.unpack("!I", response_length_data)[0]
-            print(f"Expecting {response_length} bytes...")
+                response_length = struct.unpack("!I", response_length_data)[0]
+                print(f"Expecting {response_length} bytes...")
 
-            # Receive full response data
-            response_data = b""
-            while len(response_data) < response_length:
-                chunk = self.soc.recv(response_length - len(response_data))
-                if not chunk:
-                    break
-                response_data += chunk
-            if encrypt:
-                return self.decrypt_message(response_data)
-            return json.loads(response_data.decode('utf-8'))
+                # Receive full response data
+                response_data = b""
+                while len(response_data) < response_length:
+                    chunk = self.soc.recv(response_length - len(response_data))
+                    if not chunk:
+                        break
+                    response_data += chunk
+                if encrypt:
+                    return self.decrypt_message(response_data)
+                return json.loads(response_data.decode('utf-8'))
+            except ConnectionResetError as e:
+                print('connection to server closed')
+                return {'error': 'disconnected from server'}
 
     def send_data(self, request: dict, encrypt: bool = True):
         """
@@ -131,7 +135,7 @@ class Client:
 
         response = self.listen(encrypt)
         print(f'response: {response}')
-        if 'checksum' not in response.keys():
+        if 'checksum' not in response or 'error' in response:
             return None
         else:
             checksum = response['checksum']
