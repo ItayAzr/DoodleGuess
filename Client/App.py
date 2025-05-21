@@ -436,17 +436,40 @@ class LobbyPage(tk.Frame):
         self.controller = controller
         self.config(background='lightblue')
 
-        self.start_button = tk.Button(self,  width=2*size1[0], height=2*size1[1])
+        self.grid_rowconfigure(0, weight=4)
+        self.grid_rowconfigure(1, weight=1)
+
+        self.start_button = tk.Button(self,  text="Start Game", width=2*size1[0], height=2*size1[1])
 
         self.f_players = self.controller.client.Lobby.update_player_frame()
 
-        self.f_players.pack()
+        self.f_players.grid()
 
         if self.controller.client.Lobby.host == self.controller.client.username:
-            self.start_button.pack()
+            self.start_button.grid(row=1, column=0, sticky='n')
 
         thread = threading.Thread(target=self.run)
         thread.start()
+
+    def update_players_frame(self):
+        row = 0
+        column = 0
+        for player in self.controller.client.Lobby.playerList:
+            print(1)
+            frame = tk.Frame(self.f_players)
+            label = tk.Label(frame, text=player)
+            label.grid()
+            button = tk.Button(frame, text='remove', command=lambda: self.controller.client.Lobby.remove_player(player))
+            if self.controller.client.username == self.controller.client.Lobby.host:
+                frame.config(bg='yellow')
+                button.grid(row=1, column=0, sticky='n')
+            frame.grid(row=row, column=column, sticky='nesw')
+            if column < 5:
+                column += 1
+            elif column >= 5:
+                column = 0
+                row += 1
+            print(2)
 
     def run(self):
         while True:
@@ -455,6 +478,12 @@ class LobbyPage(tk.Frame):
                 action = message['data'].pop('action')
                 if action == 'update':
                     self.controller.client.Lobby.update(message['data'])
+
+                if self.controller.client.Lobby.host == self.controller.client.username:
+                    self.start_button.grid(row=1, column=0, sticky='n')
+
+                self.update_players_frame()
+
                 if self.controller.client.Lobby.GIM:
                     self.controller.show_frame(GameBoard)
                     break
