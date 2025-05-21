@@ -439,27 +439,29 @@ class LobbyPage(tk.Frame):
         self.grid_rowconfigure(0, weight=4)
         self.grid_rowconfigure(1, weight=1)
 
-        self.start_button = tk.Button(self,  text="Start Game", width=2*size1[0], height=2*size1[1])
+        self.start_button = tk.Button(self,  text="Start Game", width=2*size1[0], height=2*size1[1], command=self.start)
 
-        self.f_players = self.controller.client.Lobby.update_player_frame()
-
+        self.f_players = tk.Frame(self)
+        self.update_players_frame()
         self.f_players.grid()
+
+        self.running = True
 
         if self.controller.client.Lobby.host == self.controller.client.username:
             self.start_button.grid(row=1, column=0, sticky='n')
 
-        thread = threading.Thread(target=self.run)
-        thread.start()
+        self.thread = threading.Thread(target=self.run)
+        self.thread.start()
 
     def update_players_frame(self):
         row = 0
         column = 0
         for player in self.controller.client.Lobby.playerList:
-            print(1)
             frame = tk.Frame(self.f_players)
             label = tk.Label(frame, text=player)
             label.grid()
-            button = tk.Button(frame, text='remove', command=lambda: self.controller.client.Lobby.remove_player(player))
+            button = tk.Button(frame, text='remove', command=lambda p=player: self.controller.client.Lobby.remove_player(p)
+)
             if self.controller.client.username == self.controller.client.Lobby.host:
                 frame.config(bg='yellow')
                 button.grid(row=1, column=0, sticky='n')
@@ -469,36 +471,43 @@ class LobbyPage(tk.Frame):
             elif column >= 5:
                 column = 0
                 row += 1
-            print(2)
 
     def run(self):
-        while True:
-            try:
+        try:
+            while self.running:
                 message = self.controller.client.listen()
-                action = message['data'].pop('action')
-                if action == 'update':
-                    self.controller.client.Lobby.update(message['data'])
-
-                if self.controller.client.Lobby.host == self.controller.client.username:
-                    self.start_button.grid(row=1, column=0, sticky='n')
-
-                self.update_players_frame()
-
-                if self.controller.client.Lobby.GIM:
-                    self.controller.show_frame(GameBoard)
+                if 'error' in message:
                     break
-            except Exception as e:
-                print(e)
+                if message['status'] == 'lobby data':
+                    action = message['data'].pop('action')
+                    if action == 'update':
+                        self.controller.client.Lobby.update(message['data'])
+
+                    if self.controller.client.Lobby.host == self.controller.client.username:
+                        self.start_button.grid(row=1, column=0, sticky='n')
+
+                    self.update_players_frame()
+
+                    if self.controller.client.Lobby.GIM:
+                        self.controller.show_frame(GameBoard)
+
+            self.controller.client.Lobby.GIM = True
+            data = {
+                'action': 'update',
+                'start_game': 'True',
+                'skip': 'True'
+            }
+            request = self.controller.client.create_request('start_game', data)
+            response = self.controller.client.send_data(request)
+        except Exception as e:
+            print(e)
+
+        self.controller.show_frame(GameBoard)
+
+
 
     def start(self):
-        self.controller.client.Lobby.GIM = True
-        data = {
-            'action': 'update',
-            'start_game': True
-        }
-        request = self.controller.client.create_request('game', data)
-        self.controller.client.send_data(request)
-        self.controller.show_frame(GameBoard)
+        self.running = False
 
 
 class GameBoard(tk.Frame):
@@ -533,7 +542,9 @@ class GameBoard(tk.Frame):
         self.size_slider.set(self.pen_width)
         self.size_slider.pack(pady=5)
 
-        self.guess_entry = tk.Entry(tool_frame, label="enter your guess")
+        self.label = tk.Label(self, text="enter your guess")
+        self.label.pack()
+        self.guess_entry = tk.Entry(tool_frame)
         self.guess_entry.pack(pady=5)
 
         self.guess_button = tk.Button(self, text="Submit guess", command=self.set_guess)
@@ -553,13 +564,13 @@ class GameBoard(tk.Frame):
         self.last_x = None
         self.last_y = None
 
-        self.run()
+        thread = threading.Thread(target=self.run)
+        thread.start()
 
     def run(self):
-        self.controller.client.Lobby.game_loop()
         while True:
-            message = self.controller.client.listen()
-            if message['turn'] == 'yes':
+            message = self.controller.client.recv_game_data()
+            if message['data']['turn'] == 'yes':
                 self.can_draw = True
                 self.word = message['data']['word']
             else:
@@ -593,11 +604,12 @@ class GameBoard(tk.Frame):
     def clear_canvas(self):
         self.canvas.delete("all")
         data = {
+            'turn': 'yes',
             'lobby_id': self.controller.client.Lobby.id,
             "action": "clear"
         }
         request = self.controller.client.create_request('game', data)
-        self.controller.client.send_data(request)
+        self.controller.client.send_game_data(request)
 
     def on_click(self, event):
         if not self.can_draw:
@@ -613,6 +625,7 @@ class GameBoard(tk.Frame):
         self.last_x, self.last_y = event.x, event.y
 
         data = {
+            'turn': 'yes',
             'lobby_id': self.controller.client.Lobby.id,
             "type": "draw",
             "x1": self.last_x,
@@ -623,7 +636,7 @@ class GameBoard(tk.Frame):
             "width": self.pen_width
         }
         request = self.controller.client.create_request('game', data)
-        self.controller.client.send_data(request)
+        self.controller.client.send_game_data(request)
 
 
 

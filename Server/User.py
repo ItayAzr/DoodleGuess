@@ -149,7 +149,12 @@ class User:
 
             return None
 
-    def send_response(self, status: str, msg: str,  data: dict = None,):
+    def recv_game_data(self):
+        data = self.connection.recv(1024)
+        return json.loads(data.decode('utf-8'))
+
+
+    def send_response(self, status: str, msg: str = '',  data: dict = None,):
         """
         :param status: request status
         :param msg: message for the client
