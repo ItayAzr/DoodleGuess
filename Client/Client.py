@@ -5,6 +5,8 @@ import pickle
 import socket
 import json
 import struct
+
+from certifi.core import exit_cacert_ctx
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 from cryptography.hazmat.primitives.asymmetric import padding
 from cryptography.hazmat.primitives import hashes, serialization
@@ -89,7 +91,7 @@ class Client:
         return encrypted
 
     def listen(self, encrypt: bool = True):
-        self.soc.settimeout(2)
+        self.soc.settimeout(1)
         while True:
             try:
                 # Receive response length first
@@ -112,6 +114,8 @@ class Client:
             except ConnectionResetError as e:
                 print('connection to server closed')
                 return {'error': 'disconnected from server'}
+            except TimeoutError as e:
+                print(e)
             finally:
                 self.soc.settimeout(None)
 

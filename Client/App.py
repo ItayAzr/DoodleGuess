@@ -471,14 +471,14 @@ class LobbyPage(tk.Frame):
             elif column >= 5:
                 column = 0
                 row += 1
-
     def run(self):
-        try:
-            while self.running:
+
+        while self.running:
+            try:
                 message = self.controller.client.listen()
                 if 'error' in message:
-                    break
-                if message['status'] == 'lobby data':
+                    print(message['error'])
+                elif message['status'] == 'lobby data':
                     action = message['data'].pop('action')
                     if action == 'update':
                         self.controller.client.Lobby.update(message['data'])
@@ -490,19 +490,18 @@ class LobbyPage(tk.Frame):
 
                     if self.controller.client.Lobby.GIM:
                         self.controller.show_frame(GameBoard)
-
+            except Exception as e:
+                print(e)
+        data = {
+            'action': 'update',
+            'start_game': 'True',
+            'skip': 'True'
+        }
+        request = self.controller.client.create_request('start_game', data)
+        response = self.controller.client.send_data(request)
+        if response['status'] == 'success':
             self.controller.client.Lobby.GIM = True
-            data = {
-                'action': 'update',
-                'start_game': 'True',
-                'skip': 'True'
-            }
-            request = self.controller.client.create_request('start_game', data)
-            response = self.controller.client.send_data(request)
-        except Exception as e:
-            print(e)
-
-        self.controller.show_frame(GameBoard)
+            self.controller.show_frame(GameBoard)
 
 
 
@@ -569,7 +568,7 @@ class GameBoard(tk.Frame):
 
     def run(self):
         while True:
-            message = self.controller.client.recv_game_data()
+            message = self.controller.client.listen()
             if message['data']['turn'] == 'yes':
                 self.can_draw = True
                 self.word = message['data']['word']
@@ -609,7 +608,7 @@ class GameBoard(tk.Frame):
             "action": "clear"
         }
         request = self.controller.client.create_request('game', data)
-        self.controller.client.send_game_data(request)
+        self.controller.client.send_data(request)
 
     def on_click(self, event):
         if not self.can_draw:
@@ -636,7 +635,7 @@ class GameBoard(tk.Frame):
             "width": self.pen_width
         }
         request = self.controller.client.create_request('game', data)
-        self.controller.client.send_game_data(request)
+        self.controller.client.send_data(request)
 
 
 

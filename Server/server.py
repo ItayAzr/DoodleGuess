@@ -122,7 +122,7 @@ class Server:
     def start_game(self, data: dict, user: User):
         try:
             if user.lobby.host == user.get_data('username'):
-                thread = threading.Thread(target=user.lobby.game_loop())
+                thread = threading.Thread(target=self.game_loop, args=(user.lobby,))
                 thread.start()
                 self.game_broadcast(data, user.lobby, user.get_data('username'))
                 return 'game started', 'success'
