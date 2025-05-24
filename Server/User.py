@@ -101,40 +101,45 @@ class User:
             print(e)
 
     # receives requests from client
-    def get_request(self) -> dict or None:
+    def get_request(self, game_request=False) -> dict or None:
         try:
-            # Step 1: Receive the message length (4 bytes)
-            msg_length_data = self.recv_all(4)
-            if not msg_length_data:
-                print("Connection closed before receiving length")
-                return None
-
-            msg_length = struct.unpack("!I", msg_length_data)[0]  # Convert 4 bytes to integer
-            print(f"Expecting {msg_length} bytes...")
-
-            # Step 2: Receive the complete JSON message
-            data = self.recv_all(msg_length)
-
-            if data is None:
-                return None
-            print(type(data))
-
-            if 'aes_key' in self.data.keys():
-                request = self.decrypt_message(data)
+            if game_request:
+                request_data = self.connection.recv(1024)
+                request = json.loads(request_data.decode())
+                return request
             else:
-                request = json.loads(data.decode('utf-8'))
-            print(f'request: {request}')
+                # Step 1: Receive the message length (4 bytes)
+                msg_length_data = self.recv_all(4)
+                if not msg_length_data:
+                    print("Connection closed before receiving length")
+                    return None
 
-            if 'checksum' not in request.keys():
-                self.send_response("Bad Request", 'missing checksum value')
-            else:
-                checksum = request['checksum']
-                request.pop('checksum')
-                current_checksum = hashlib.sha256(json.dumps(request).encode()).hexdigest()
-                if current_checksum == checksum:
-                    return request
+                msg_length = struct.unpack("!I", msg_length_data)[0]  # Convert 4 bytes to integer
+                print(f"Expecting {msg_length} bytes...")
+
+                # Step 2: Receive the complete JSON message
+                data = self.recv_all(msg_length)
+
+                if data is None:
+                    return None
+                print(type(data))
+
+                if 'aes_key' in self.data.keys():
+                    request = self.decrypt_message(data)
                 else:
-                    self.send_response("Bad Request", 'incomplete request')
+                    request = json.loads(data.decode('utf-8'))
+                print(f'request: {request}')
+
+                if 'checksum' not in request.keys():
+                    self.send_response("Bad Request", 'missing checksum value')
+                else:
+                    checksum = request['checksum']
+                    request.pop('checksum')
+                    current_checksum = hashlib.sha256(json.dumps(request).encode()).hexdigest()
+                    if current_checksum == checksum:
+                        return request
+                    else:
+                        self.send_response("Bad Request", 'incomplete request')
 
         except ConnectionResetError:
             # if the connection is reset, return None
@@ -143,9 +148,9 @@ class User:
         except Exception as e:
             # print the exception
             print(e)
-
-            # send an error response
-            self.send_response("Bad Request", 'oops, something went wrong')
+            if not game_request:
+                # send an error response
+                self.send_response("Bad Request", 'oops, something went wrong')
 
             return None
 
@@ -190,39 +195,5 @@ class User:
 
             return False
 
-    def push_notification(self, update: str, data: dict = None) -> bool:
-        """
-        Send push notification to the client
-        :param update:
-        :param data:
-        :return:
-        """
-        try:
-            # group all the response (except the checksum) into a json to calc the checksum.
-            response = {
-                "Update": update,
-            }
-
-            # add the data if exists.
-            if data is not None:
-                response["Data"] = data
-
-            # calc the checksum, md5 to hex.
-            checksum = hashlib.sha256(json.dumps(response).encode('utf-8')).hexdigest()
-
-            # add the checksum to the response
-            response["Checksum"] = checksum
-
-            # stringify the json format and encode to bytes.
-            stringify_response = json.dumps(response).encode('utf-8')
-
-            # send the response to the client.
-            self.connection.send(stringify_response)
-
-
-
-        except Exception as e:
-            # print the exception to the console
-            print("Handler | send_response", str(e))
-
-            return False
+    def send_game_data(self, data):
+        self.connection.sendall(json.dumps(data).encode('utf-8'))

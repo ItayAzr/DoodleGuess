@@ -447,6 +447,8 @@ class LobbyPage(tk.Frame):
 
         self.running = True
 
+        self.controller.client.Lobby.waiting = True
+
         if self.controller.client.Lobby.host == self.controller.client.username:
             self.start_button.grid(row=1, column=0, sticky='n')
 
@@ -460,8 +462,8 @@ class LobbyPage(tk.Frame):
             frame = tk.Frame(self.f_players)
             label = tk.Label(frame, text=player)
             label.grid()
-            button = tk.Button(frame, text='remove', command=lambda p=player: self.controller.client.Lobby.remove_player(p)
-)
+            button = tk.Button(frame, text='remove',
+                               command=lambda p=player: self.controller.client.Lobby.remove_player(p))
             if self.controller.client.username == self.controller.client.Lobby.host:
                 frame.config(bg='yellow')
                 button.grid(row=1, column=0, sticky='n')
@@ -471,11 +473,11 @@ class LobbyPage(tk.Frame):
             elif column >= 5:
                 column = 0
                 row += 1
-    def run(self):
 
-        while self.running:
+    def run(self):
+        while self.controller.client.Lobby.waiting:
             try:
-                message = self.controller.client.listen()
+                message = self.controller.client.game_listen()
                 if 'error' in message:
                     print(message['error'])
                 elif message['status'] == 'lobby data':
@@ -490,6 +492,7 @@ class LobbyPage(tk.Frame):
 
                     if self.controller.client.Lobby.GIM:
                         self.controller.show_frame(GameBoard)
+                        break
             except Exception as e:
                 print(e)
         data = {
@@ -498,15 +501,18 @@ class LobbyPage(tk.Frame):
             'skip': 'True'
         }
         request = self.controller.client.create_request('start_game', data)
+        print('request sent')
         response = self.controller.client.send_data(request)
+        print(f'response: {response}')
         if response['status'] == 'success':
             self.controller.client.Lobby.GIM = True
+            self.controller.client.in_game = True
             self.controller.show_frame(GameBoard)
 
-
-
     def start(self):
-        self.running = False
+        self.controller.client.Lobby.waiting = False
+        self.controller.client.Lobby.GIM = True
+01        print('starting game')
 
 
 class GameBoard(tk.Frame):
@@ -568,23 +574,29 @@ class GameBoard(tk.Frame):
 
     def run(self):
         while True:
-            message = self.controller.client.listen()
-            if message['data']['turn'] == 'yes':
-                self.can_draw = True
-                self.word = message['data']['word']
-            else:
-                self.can_draw = False
-                self.word_len = message['data']['word_length']
+            if not self.can_draw:
+                message = self.controller.client.game_listen()
+                if message is None:
+                    pass
+                if message['turn'] == 'yes':
+                    self.can_draw = True
+                    self.word = message['data']['word']
+                else:
+                    self.can_draw = False
+                    self.word_len = message['data']['word_length']
 
-            if message['data']['action'] == 'draw':
-                self.canvas.create_line(
-                    message['data']['x1'], message['data']['y1'],
-                    message['data']['x2'], message['data']['y2'],
-                    fill=message['data']['color'],
-                    width=message['data']['width']
-                )
-            elif message['data']['action'] == 'clear':
-                self.canvas.delete("all")
+                if message['action'] == 'update':
+                    self.controller.client.Lobby.update(message['data'])
+
+                if message['action'] == 'draw':
+                    self.canvas.create_line(
+                        message['data']['x1'], message['data']['y1'],
+                        message['data']['x2'], message['data']['y2'],
+                        fill=message['data']['color'],
+                        width=message['data']['width']
+                    )
+                elif message['action'] == 'clear':
+                    self.canvas.delete("all")
 
     def set_guess(self):
         guess = self.guess_entry.get()
@@ -603,8 +615,6 @@ class GameBoard(tk.Frame):
     def clear_canvas(self):
         self.canvas.delete("all")
         data = {
-            'turn': 'yes',
-            'lobby_id': self.controller.client.Lobby.id,
             "action": "clear"
         }
         request = self.controller.client.create_request('game', data)
@@ -624,15 +634,15 @@ class GameBoard(tk.Frame):
         self.last_x, self.last_y = event.x, event.y
 
         data = {
-            'turn': 'yes',
-            'lobby_id': self.controller.client.Lobby.id,
-            "type": "draw",
-            "x1": self.last_x,
-            "y1": self.last_y,
-            "x2": event.x,
-            "y2": event.y,
-            "color": self.pen_color,
-            "width": self.pen_width
+            "action": "draw",
+            'line_data': {
+                "x1": self.last_x,
+                "y1": self.last_y,
+                "x2": event.x,
+                "y2": event.y,
+                "color": self.pen_color,
+                "width": self.pen_width
+            }
         }
         request = self.controller.client.create_request('game', data)
         self.controller.client.send_data(request)

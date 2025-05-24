@@ -74,10 +74,11 @@ class Server:
                             msg, status, data = self.join_lobby(request['data']['lobby_id'], user)
 
                         if request['request'] == 'start_game':
+
                             msg, status = self.start_game(request['data'], user)
 
                         if request['request'] == 'game':
-                            self.game_broadcast(request['data'], user)
+                            self.game_broadcast(request['data'], user.lobby, user.get_data('username'))
 
                         user.send_response(status, msg, data)
                     else:
@@ -135,19 +136,53 @@ class Server:
 
     def game_loop(self, lobby: Lobby):
         for game_round in range(lobby.rounds):
-            word = lobby.get_draw_word()
-
+            lobby.get_draw_word()
+            guesser = {
+                'skip': 'True',
+                'word_length': len(lobby.word),
+                'turn': 'no'
+            }
+            drawer = {
+                'action': 'update',
+                'word_length': lobby.word,
+                'turn': 'yes'
+            }
             # chooses the drawer and sends the word and word length
             for player in lobby.playerList:
+                self.game_broadcast(guesser, lobby, player)
                 for user in self.active_users:
-                    if user.get_data('username') == player:
-                        user.send_response({'turn': 'yes', 'data': {'word': word}})
-                    else:
-                        user.send_response({'turn': 'no', 'data': {'word_length': len(word)}})
+                    username = user.get_data('username')
+                    if username in lobby.playerList:
+                        if username == player:
+                            user.send_game_data(drawer)
+                    thread = threading.Thread(target=self.handle_player, args=(user, username, lobby))
+                    thread.start()
+                start_time = time.time()
+                while time.time() - start_time <= lobby.time_limit:
+                    time.sleep(0.1)
 
-            start_time = time.time()
-            while time.time() - start_time <= lobby.time_limit:
-                time.sleep(0.1)
+    def handle_player(self, user: User, username, lobby: Lobby):
+        while lobby.in_round:
+            try:
+                request = user.get_request(game_request=True)
+                if username == lobby.host:
+                    self.game_broadcast({'data': request, 'skip': 'True'}, lobby, username)
+                elif 'guess' in request:
+                    if username not in lobby.guessed_correct:
+                        if request['guess'] == lobby.word:
+                            lobby.guessed_correct.append(username)
+                            data = {
+                                'msg': 'guess is correct'
+                            }
+                        else:
+                            data = {
+                                'msg': 'incorrect guess'
+                            }
+                        user.send_game_data(data)
+
+
+            except Exception as e:
+                pass
 
     def check_empty_lobby(self, lobby_id):
         for lobby in self.lobbies:
@@ -157,7 +192,7 @@ class Server:
                     print('deleted empty lobby')
                     break
 
-    def game_broadcast(self, data: dict, lobby: Lobby, sender: str, skip_sender: bool = False):
+    def game_broadcast(self, data: dict, lobby: Lobby, sender: str):
         """
         :param data: the data that the server broadcasts to the players.
         :param lobby: the lobby of the player that sends the request
@@ -166,6 +201,7 @@ class Server:
         :return: True if broadcast was completed successfully else, returns False
         """
         try:
+            skip_sender = bool(data.pop('skip'))
             for user in self.active_users:
                 if user.get_data('username') in lobby.playerList:
                     if not skip_sender:

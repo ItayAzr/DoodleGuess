@@ -6,6 +6,7 @@ import socket
 import json
 import struct
 
+import select
 from certifi.core import exit_cacert_ctx
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 from cryptography.hazmat.primitives.asymmetric import padding
@@ -89,9 +90,26 @@ class Client:
         # Concatenate nonce + ciphertext and base64-encode it
         encrypted = base64.b64encode(nonce + ciphertext).decode("utf-8")
         return encrypted
+    def game_listen(self):
+        if self.Lobby is not None:
+            if self.Lobby.waiting or self.Lobby.GIM:
+                while True:
+                    try:
+                        ready = False
+                        if self.Lobby.waiting:
+                            ready, _, _ = select.select([self.soc], [], [], 0.8)
+                        elif self.Lobby.GIM:
+                            ready, _, _ = select.select([self.soc], [], [], 0.1)
+                        if ready:
+                            data = self.soc.recv(1024)
+                            return json.loads(data.decode())
+                        else:
+                            # Nothing received — check if game should exit or update UI
+                            continue
+                    except Exception as e:
+                        print(e)
 
     def listen(self, encrypt: bool = True):
-        self.soc.settimeout(1)
         while True:
             try:
                 # Receive response length first
@@ -114,11 +132,8 @@ class Client:
             except ConnectionResetError as e:
                 print('connection to server closed')
                 return {'error': 'disconnected from server'}
-            except TimeoutError as e:
+            except Exception as e:
                 print(e)
-            finally:
-                self.soc.settimeout(None)
-
 
     def send_data(self, request: dict, encrypt: bool = True):
         """
@@ -134,25 +149,27 @@ class Client:
         else:
             data = self.encrypt_message(request).encode('utf-8')
             print(f'encrypted request: {type(data)}, {data}')
-
-        # Step 1: Send the message length first (4 bytes)
-        self.soc.send(struct.pack("!I", len(data)))
-        # Step 2: Send the actual JSON data
-        self.soc.sendall(data)
-        print('request sent')
-
-        response = self.listen(encrypt)
-        print(f'response: {response}')
-        if 'checksum' not in response or 'error' in response:
-            return None
+        if self.Lobby is not None:
+            if self.Lobby.GIM or self.Lobby.waiting:
+                self.soc.sendall(data)
         else:
-            checksum = response['checksum']
-            response.pop('checksum')
-            current_checksum = hashlib.sha256(json.dumps(response).encode('utf-8')).hexdigest()
-            if current_checksum == checksum:
-                return response
-            else:
+            # Step 1: Send the message length first (4 bytes)
+            self.soc.send(struct.pack("!I", len(data)))
+            # Step 2: Send the actual JSON data
+            self.soc.sendall(data)
+            print('request sent')
+            response = self.listen(encrypt)
+            print(f'response: {response}')
+            if 'checksum' not in response or 'error' in response:
                 return None
+            else:
+                checksum = response['checksum']
+                response.pop('checksum')
+                current_checksum = hashlib.sha256(json.dumps(response).encode('utf-8')).hexdigest()
+                if current_checksum == checksum:
+                    return response
+                else:
+                    return None
 
     def set_lobby(self, lobby):
         print(pickle.loads(lobby))

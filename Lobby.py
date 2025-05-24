@@ -9,17 +9,23 @@ class Lobby:
     def __init__(self, lobby_id: int, host: str, max_players: int, time_limit: int, rounds: int, difficulty: str):
         self.id = lobby_id
         self.host = host
+
         self.max = max_players
         self.time_limit = time_limit
         self.difficulty = difficulty
         self.rounds = rounds
-        self.waiting = True
+
+        self.in_round = False
+        self.waiting = False
         self.GIM = False  # GIM -> Game In Process
-        self.status = 'waiting for players'
+
         self.playerList = [host]
+        self.guessed_correct = []
         self.scores = {
             self.host: 0
         }
+
+        self.word = ''
         self.full = False
 
     def update_player_frame(self) -> tk.Frame:
@@ -115,7 +121,7 @@ class Lobby:
         settings = difficulty_settings.get(self.difficulty, difficulty_settings["easy"])
         topic = random.choice(settings["topics"])
 
-        url = f"https://api.datamuse.com/words?topics={topic}&md=pf&max=1000"  # 'md=pf' gives part of speech and frequency
+        url = f"https://api.datamuse.com/words?topics={topic}&md=pf&max=100"  # 'md=pf' gives part of speech and frequency
         try:
             response = requests.get(url)
             if response.status_code == 200:
@@ -136,15 +142,13 @@ class Lobby:
                         filtered_words.append(word["word"])
 
                 if filtered_words:
-                    return random.choice(filtered_words).lower()
+                    self.word = random.choice(filtered_words).lower()
                 else:
-                    return "no_word_found"
+                    self.word = 'house'
             else:
-                return "api_error"
-
+                self.word = 'house'
         except Exception as e:
             print("Error:", e)
-            return "house"
-
+            self.word = 'house'
 
 
