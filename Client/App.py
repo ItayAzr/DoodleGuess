@@ -621,7 +621,7 @@ class GameBoard(tk.Frame):
             "action": "clear"
         }
         request = self.controller.client.create_request('game', data)
-        self.controller.client.send_data(request)
+        self.controller.client.send_game_data(request)
 
     def on_click(self, event):
         if not self.can_draw:
@@ -648,7 +648,7 @@ class GameBoard(tk.Frame):
             }
         }
         request = self.controller.client.create_request('game', data)
-        self.controller.client.send_data(request)
+        self.controller.client.send_game_data(request)
 
 
 

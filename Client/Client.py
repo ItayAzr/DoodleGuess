@@ -90,6 +90,7 @@ class Client:
         # Concatenate nonce + ciphertext and base64-encode it
         encrypted = base64.b64encode(nonce + ciphertext).decode("utf-8")
         return encrypted
+
     def game_listen(self):
         if self.Lobby is not None:
             while self.Lobby.waiting or self.Lobby.GIM:
@@ -138,6 +139,10 @@ class Client:
             except Exception as e:
                 print(e)
 
+    def send_game_data(self, data):
+        self.soc.sendall(json.dumps(data).encode())
+        print(f'game data sent {data}')
+
     def send_data(self, request: dict, encrypt: bool = True):
         """
         :param request: a dictionary that is sent to the server
@@ -152,27 +157,24 @@ class Client:
         else:
             data = self.encrypt_message(request).encode('utf-8')
             print(f'encrypted request: {type(data)}, {data}')
-        if self.Lobby is not None:
-            if self.Lobby.GIM or self.Lobby.waiting:
-                self.soc.sendall(data)
+
+        # Step 1: Send the message length first (4 bytes)
+        self.soc.send(struct.pack("!I", len(data)))
+        # Step 2: Send the actual JSON data
+        self.soc.sendall(data)
+        print('request sent')
+        response = self.listen(encrypt)
+        print(f'response: {response}')
+        if 'checksum' not in response or 'error' in response:
+            return None
         else:
-            # Step 1: Send the message length first (4 bytes)
-            self.soc.send(struct.pack("!I", len(data)))
-            # Step 2: Send the actual JSON data
-            self.soc.sendall(data)
-            print('request sent')
-            response = self.listen(encrypt)
-            print(f'response: {response}')
-            if 'checksum' not in response or 'error' in response:
-                return None
+            checksum = response['checksum']
+            response.pop('checksum')
+            current_checksum = hashlib.sha256(json.dumps(response).encode('utf-8')).hexdigest()
+            if current_checksum == checksum:
+                return response
             else:
-                checksum = response['checksum']
-                response.pop('checksum')
-                current_checksum = hashlib.sha256(json.dumps(response).encode('utf-8')).hexdigest()
-                if current_checksum == checksum:
-                    return response
-                else:
-                    return None
+                return None
 
     def set_lobby(self, lobby):
         print(pickle.loads(lobby))

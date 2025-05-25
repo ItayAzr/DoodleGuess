@@ -75,7 +75,6 @@ class Server:
                             msg, status, data = self.join_lobby(request['data']['lobby_id'], user)
 
                         if request['request'] == 'start_game':
-
                             msg, status = self.start_game(request['data'], user)
 
                         if request['request'] == 'game':
@@ -160,6 +159,8 @@ class Server:
                     thread.start()
                 start_time = time.time()
                 while time.time() - start_time <= lobby.time_limit:
+                    if self.check_empty_lobby(Lobby):
+                        return 'lobby closed since it was empty'
                     time.sleep(0.1)
 
     def handle_player(self, user: User, username, lobby: Lobby):
@@ -185,13 +186,19 @@ class Server:
             except Exception as e:
                 pass
 
-    def check_empty_lobby(self, lobby_id):
-        for lobby in self.lobbies:
-            if lobby.id == lobby_id:
-                if len(lobby.playerList) == 0:
-                    self.lobbies.remove(lobby)
+    def check_empty_lobby(self, lobby_id, lobby=None):
+        if lobby is not None:
+            if len(lobby.playerList) == 0:
+                self.lobbies.remove(lobby)
+                print('deleted empty lobby')
+                return True
+        for LOBBY in self.lobbies:
+            if LOBBY.id == lobby_id:
+                if len(LOBBY.playerList) == 0:
+                    self.lobbies.remove(Lobby)
                     print('deleted empty lobby')
-                    break
+                    return True
+        return False
 
     def game_broadcast(self, data: dict, lobby: Lobby, sender: str):
         """
@@ -243,8 +250,10 @@ class Server:
                         data = {'action': 'update', 'add_player': user.get_data('username'), 'skip': 'True'}
                         return f'joined {lobby.host}\'s lobby', 'success', lobby_data
                     return 'joining lobby failed', 'failed', data
+
                 except Exception as e:
                     return 'joining lobby failed', 'failed', data
+
                 finally:
                     if joined:
                         self.game_broadcast(data, lobby, user.get_data('username'), )
