@@ -513,7 +513,6 @@ class LobbyPage(tk.Frame):
 
     def start(self):
         self.controller.client.Lobby.waiting = False
-        self.controller.client.Lobby.GIM = True
         print('starting game')
 
 

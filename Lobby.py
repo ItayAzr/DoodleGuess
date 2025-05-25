@@ -79,17 +79,22 @@ class Lobby:
             return False
 
     def update(self, data: dict):
-        for key in data:
-            if key == 'host':
+        for event in data:
+            if event == 'host':
                 for player in self.playerList:
-                    if player == data[key]:
+                    if player == data[event]:
                         self.host = player
-            if key == 'scores':
+            if event == 'scores':
                 for score in self.scores:
                     self.scores[score] += data['scores'][score]
-            if key == 'remove_player':
-                self.remove_player(data[key])
-            if key == 'start_game':
+
+            if event == 'remove_player':
+                self.remove_player(data[event])
+
+            if event == 'add_player':
+                self.add_player(data[event])
+
+            if event == 'start_game':
                 self.GIM = True
 
     def update_host(self):

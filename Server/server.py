@@ -234,13 +234,20 @@ class Server:
     def join_lobby(self, lobby_id, user: User):
         for lobby in self.lobbies:
             if lobby.id == lobby_id:
-                if lobby.add_player(user.get_data('username')):
-                    lobby_data = {'lobby': base64.b64encode(pickle.dumps(lobby)).decode()}
-                    user.lobby = lobby
-                    data = {'action': 'update', 'add_player': user.get_data('username'), 'skip': 'True'}
-                    self.game_broadcast(data, lobby, user.get_data('username'),)
-                    return f'joined {lobby.host}\'s lobby', 'success', lobby_data
-                return 'joining lobby failed', 'failed', None
+                joined = lobby.add_player(user.get_data('username'))
+                data = { }
+                try:
+                    if joined:
+                        lobby_data = {'lobby': base64.b64encode(pickle.dumps(lobby)).decode()}
+                        user.lobby = lobby
+                        data = {'action': 'update', 'add_player': user.get_data('username'), 'skip': 'True'}
+                        return f'joined {lobby.host}\'s lobby', 'success', lobby_data
+                    return 'joining lobby failed', 'failed', data
+                except Exception as e:
+                    return 'joining lobby failed', 'failed', data
+                finally:
+                    if joined:
+                        self.game_broadcast(data, lobby, user.get_data('username'), )
 
     # creates a new lobby
     def create_lobby(self, data: dict, user: User):
