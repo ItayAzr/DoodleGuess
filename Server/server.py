@@ -51,8 +51,10 @@ class Server:
             print(f"New connection from {user.get_data('username')} \n")
             if self.key_exchange(user, manager):
                 while True:
-                    request = user.get_request()
-                    if not user.lobby.GIM and request is not None:
+                    if user.lobby is None or not user.lobby.GIM:
+                        request = user.get_request()
+                        if request is None:
+                            continue
                         status = ''
                         msg = ''
                         data = None
@@ -138,15 +140,17 @@ class Server:
         for game_round in range(lobby.rounds):
             lobby.word = lobby.get_draw_word()
             guesser = {
-
+                'action': 'update',
                 'skip': 'True',
                 'word_length': len(lobby.word),
                 'turn': 'no'
+
             }
             drawer = {
                 'action': 'update',
                 'word': lobby.word,
-                'turn': 'yes'
+                'turn': 'yes',
+                'skip': 'no'
             }
             # chooses the drawer and sends the word and word length
             for player in lobby.playerList:
@@ -154,6 +158,9 @@ class Server:
                     username = user.get_data('username')
                     if username in lobby.playerList:
                         if username == player:
+                            lobby.drawer = player
+                            drawer['drawer'] = player
+                            guesser['drawer'] = player
                             user.send_game_data(drawer)
                             self.game_broadcast(guesser, lobby, username)
                     thread = threading.Thread(target=self.handle_player, args=(user, username, lobby))

@@ -88,6 +88,9 @@ class Lobby:
                 for score in self.scores:
                     self.scores[score] += data['scores'][score]
 
+            if event == 'drawer':
+                self.drawer = data[event]
+
             if event == 'remove_player':
                 self.remove_player(data[event])
 

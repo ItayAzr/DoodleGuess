@@ -615,9 +615,10 @@ class GameBoard(tk.Frame):
                     if message['turn'] == 'yes':
                         self.can_draw = True
                         self.word = message['word']
-                    else:
+                    if message['turn'] == 'no':
                         self.can_draw = False
                         self.word_len = message['word_length']
+
                     if 'action' in message:
                         action = message['action']
                         if action == 'update':
