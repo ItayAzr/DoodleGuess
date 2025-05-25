@@ -196,4 +196,6 @@ class User:
             return False
 
     def send_game_data(self, data):
-        self.connection.sendall(json.dumps(data).encode('utf-8'))
+        self.connection.sendall(json.dumps(data).encode())
+        print(f'sent game data: {data}')
+

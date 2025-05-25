@@ -198,18 +198,21 @@ class Server:
         :param data: the data that the server broadcasts to the players.
         :param lobby: the lobby of the player that sends the request
         :param sender: username of the player that sends the request
-        :param skip_sender: whether to send broadcast back to the plater that requested it or not
         :return: True if broadcast was completed successfully else, returns False
         """
         try:
+            print(f'{type(data)}, data: {data}')
             skip_sender = bool(data.pop('skip'))
             for user in self.active_users:
-                if user.get_data('username') in lobby.playerList:
-                    if not skip_sender:
-                        user.send_response(json.dumps(data).encode())
+                username = user.get_data('username')
+                if username in lobby.playerList:
+                    if skip_sender:
+                        if username != sender:
+                            user.send_game_data(data)
                     else:
-                        if not user.get_data('username') == sender:
-                            user.send_response(json.dumps(data).encode())
+                        user.send_game_data(data)
+
+                    print(f'data sent to {username}')
             return True
         except Exception as e:
             print(e)
