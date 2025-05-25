@@ -155,8 +155,10 @@ class Server:
                     if username in lobby.playerList:
                         if username == player:
                             user.send_game_data(drawer)
+                            self.game_broadcast(guesser, lobby, username)
                     thread = threading.Thread(target=self.handle_player, args=(user, username, lobby))
                     thread.start()
+
                 start_time = time.time()
                 while time.time() - start_time <= lobby.time_limit:
                     if self.check_empty_lobby(Lobby):
@@ -168,7 +170,7 @@ class Server:
             try:
                 request = user.get_request(game_request=True)
                 if username == lobby.host:
-                    self.game_broadcast({'data': request, 'skip': 'True'}, lobby, username)
+                    self.game_broadcast({'data': request, 'turn': 'no', 'skip': 'True'}, lobby, username)
                 elif 'guess' in request:
                     if username not in lobby.guessed:
                         if request['guess'] == lobby.word:
