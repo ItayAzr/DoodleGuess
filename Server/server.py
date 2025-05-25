@@ -1,4 +1,5 @@
 import base64
+import json
 import time
 
 from Server.User import User
@@ -205,10 +206,10 @@ class Server:
             for user in self.active_users:
                 if user.get_data('username') in lobby.playerList:
                     if not skip_sender:
-                        user.send_response(data)
+                        user.send_response(json.dumps(data).encode())
                     else:
                         if not user.get_data('username') == sender:
-                            user.send_response(data)
+                            user.send_response(json.dumps(data).encode())
             return True
         except Exception as e:
             print(e)
@@ -233,7 +234,7 @@ class Server:
                 if lobby.add_player(user.get_data('username')):
                     lobby_data = {'lobby': base64.b64encode(pickle.dumps(lobby)).decode()}
                     user.lobby = lobby
-                    data = {'data': {'action': 'update', 'add_player': user.get_data('username'), 'skip': 'True'}}
+                    data = {'action': 'update', 'add_player': user.get_data('username'), 'skip': 'True'}
                     self.game_broadcast(data, lobby, user.get_data('username'),)
                     return f'joined {lobby.host}\'s lobby', 'success', lobby_data
                 return 'joining lobby failed', 'failed', None

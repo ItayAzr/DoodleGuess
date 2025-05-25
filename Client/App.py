@@ -445,8 +445,6 @@ class LobbyPage(tk.Frame):
         self.update_players_frame()
         self.f_players.grid()
 
-        self.running = True
-
         self.controller.client.Lobby.waiting = True
 
         if self.controller.client.Lobby.host == self.controller.client.username:
