@@ -154,7 +154,7 @@ class User:
 
             return None
 
-    def send_response(self, status: str, msg: str,  data: dict = None,):
+    def send_response(self, status: str, msg: str = '',  data: dict = None,):
         """
         :param status: request status
         :param msg: message for the client

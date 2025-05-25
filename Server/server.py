@@ -168,9 +168,9 @@ class Server:
                 if username == lobby.host:
                     self.game_broadcast({'data': request, 'skip': 'True'}, lobby, username)
                 elif 'guess' in request:
-                    if username not in lobby.guessed_correct:
+                    if username not in lobby.guessed:
                         if request['guess'] == lobby.word:
-                            lobby.guessed_correct.append(username)
+                            lobby.guessed.append(username)
                             data = {
                                 'msg': 'guess is correct'
                             }
@@ -231,11 +231,11 @@ class Server:
         for lobby in self.lobbies:
             if lobby.id == lobby_id:
                 if lobby.add_player(user.get_data('username')):
-                    data = {'lobby': base64.b64encode(pickle.dumps(lobby)).decode()}
+                    lobby_data = {'lobby': base64.b64encode(pickle.dumps(lobby)).decode()}
                     user.lobby = lobby
-                    data = {'data': {'add_player': user.get_data('username')}}
-                    self.game_broadcast(data, lobby, user.get_data('username'), True)
-                    return f'joined {lobby.host}\'s lobby', 'success', data
+                    data = {'data': {'action': 'update', 'add_player': user.get_data('username'), 'skip': 'True'}}
+                    self.game_broadcast(data, lobby, user.get_data('username'),)
+                    return f'joined {lobby.host}\'s lobby', 'success', lobby_data
                 return 'joining lobby failed', 'failed', None
 
     # creates a new lobby

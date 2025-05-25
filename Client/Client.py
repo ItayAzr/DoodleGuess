@@ -108,6 +108,7 @@ class Client:
                         continue
                 except Exception as e:
                     print(e)
+                    break
 
     def listen(self, encrypt: bool = True):
         while True:

@@ -19,6 +19,9 @@ class Lobby:
         self.GIM = False  # GIM -> Game In Process
         self.full = False
 
+        self.in_round = False
+        self.word = ''
+
         self.playerList = [host]
         self.drawer = ''
         self.guessed = []
