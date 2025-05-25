@@ -92,22 +92,22 @@ class Client:
         return encrypted
     def game_listen(self):
         if self.Lobby is not None:
-            if self.Lobby.waiting or self.Lobby.GIM:
-                while True:
-                    try:
-                        ready = False
-                        if self.Lobby.waiting:
-                            ready, _, _ = select.select([self.soc], [], [], 0.8)
-                        elif self.Lobby.GIM:
-                            ready, _, _ = select.select([self.soc], [], [], 0.1)
-                        if ready:
-                            data = self.soc.recv(1024)
-                            return json.loads(data.decode())
-                        else:
-                            # Nothing received — check if game should exit or update UI
-                            continue
-                    except Exception as e:
-                        print(e)
+            while self.Lobby.waiting or self.Lobby.GIM:
+                try:
+                    ready = False
+                    if self.Lobby.waiting:
+                        ready, _, _ = select.select([self.soc], [], [], 0.8)
+                    elif self.Lobby.GIM:
+                        ready, _, _ = select.select([self.soc], [], [], 0.1)
+                    if ready:
+                        print('listening...')
+                        data = self.soc.recv(1024)
+                        return json.loads(data.decode())
+                    else:
+                        # Nothing received — check if game should exit or update UI
+                        continue
+                except Exception as e:
+                    print(e)
 
     def listen(self, encrypt: bool = True):
         while True:

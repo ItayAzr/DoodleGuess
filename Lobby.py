@@ -15,27 +15,33 @@ class Lobby:
         self.difficulty = difficulty
         self.rounds = rounds
 
-        self.in_round = False
-        self.waiting = False
+        self.waiting = True
         self.GIM = False  # GIM -> Game In Process
+        self.full = False
 
         self.playerList = [host]
-        self.guessed_correct = []
+        self.drawer = ''
+        self.guessed = []
         self.scores = {
             self.host: 0
         }
 
-        self.word = ''
-        self.full = False
 
     def update_player_frame(self) -> tk.Frame:
         player_frame = tk.Frame()
         for player in self.playerList:
             frame = tk.Frame(player_frame, bg='white')
+            label = f'{player}'
+            if self.GIM:
+                label += f', score: {self.scores[player]}'
+            player_label = tk.Label(frame, text=label)
             if player == self.host:
                 frame.config(bg='yellow')
-            name = player
-            player_label = tk.Label(frame, text=f'{name}, score: {self.scores[player]}')
+                player_label.config(bg='yellow')
+            if player in self.guessed:
+                frame.config(bg='green')
+                player_label.config(bg='green')
+
             player_label.pack()
             frame.pack()
         return player_frame
@@ -121,7 +127,7 @@ class Lobby:
         settings = difficulty_settings.get(self.difficulty, difficulty_settings["easy"])
         topic = random.choice(settings["topics"])
 
-        url = f"https://api.datamuse.com/words?topics={topic}&md=pf&max=100"  # 'md=pf' gives part of speech and frequency
+        url = f"https://api.datamuse.com/words?topics={topic}&md=pf&max=1000"  # 'md=pf' gives part of speech and frequency
         try:
             response = requests.get(url)
             if response.status_code == 200:
@@ -142,13 +148,15 @@ class Lobby:
                         filtered_words.append(word["word"])
 
                 if filtered_words:
-                    self.word = random.choice(filtered_words).lower()
+                    return random.choice(filtered_words).lower()
                 else:
-                    self.word = 'house'
+                    return "no_word_found"
             else:
-                self.word = 'house'
+                return "api_error"
+
         except Exception as e:
             print("Error:", e)
-            self.word = 'house'
+            return "house"
+
 
 

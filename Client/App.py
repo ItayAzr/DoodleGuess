@@ -461,12 +461,14 @@ class LobbyPage(tk.Frame):
         for player in self.controller.client.Lobby.playerList:
             frame = tk.Frame(self.f_players)
             label = tk.Label(frame, text=player)
-            label.grid()
+
             button = tk.Button(frame, text='remove',
                                command=lambda p=player: self.controller.client.Lobby.remove_player(p))
             if self.controller.client.username == self.controller.client.Lobby.host:
                 frame.config(bg='yellow')
+                label.config(bg='yellow')
                 button.grid(row=1, column=0, sticky='n')
+            label.grid(row=0, column=0, sticky='nesw')
             frame.grid(row=row, column=column, sticky='nesw')
             if column < 5:
                 column += 1
@@ -478,9 +480,7 @@ class LobbyPage(tk.Frame):
         while self.controller.client.Lobby.waiting:
             try:
                 message = self.controller.client.game_listen()
-                if 'error' in message:
-                    print(message['error'])
-                elif message['status'] == 'lobby data':
+                if message['status'] == 'lobby data':
                     action = message['data'].pop('action')
                     if action == 'update':
                         self.controller.client.Lobby.update(message['data'])
@@ -512,7 +512,7 @@ class LobbyPage(tk.Frame):
     def start(self):
         self.controller.client.Lobby.waiting = False
         self.controller.client.Lobby.GIM = True
-01        print('starting game')
+        print('starting game')
 
 
 class GameBoard(tk.Frame):
@@ -573,6 +573,7 @@ class GameBoard(tk.Frame):
         thread.start()
 
     def run(self):
+        print('game started')
         while True:
             if not self.can_draw:
                 message = self.controller.client.game_listen()
