@@ -665,6 +665,8 @@ class GameBoard(tk.Frame):
         if not self.can_draw:
             return
         self.pen_width = self.size_slider.get()
+
+        print(self.last_x, self.last_y, event.x, event.y)
         self.canvas.create_line(self.last_x, self.last_y, event.x, event.y,
                                 fill=self.pen_color, width=self.pen_width)
         self.last_x, self.last_y = event.x, event.y
