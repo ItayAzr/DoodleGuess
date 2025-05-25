@@ -469,9 +469,10 @@ class LobbyPage(tk.Frame):
             frame = tk.Frame(self.f_players)
             label = tk.Label(frame, text=player)
 
-            button = tk.Button(frame, text='remove',
-                               command=lambda p=player: self.controller.client.Lobby.remove_player(p))
+
             if player == self.controller.client.Lobby.host:
+                button = tk.Button(frame, text='remove',
+                                   command=lambda p=player: self.controller.client.Lobby.remove_player(p))
                 frame.config(bg='yellow')
                 label.config(bg='yellow')
                 button.grid(row=1, column=0, sticky='n')
@@ -661,8 +662,7 @@ class GameBoard(tk.Frame):
         data = {
             "action": "clear"
         }
-        request = self.controller.client.create_request('game', data)
-        self.controller.client.send_game_data(request)
+        self.controller.client.send_game_data(data)
 
     def on_click(self, event):
         if not self.can_draw:
@@ -690,8 +690,7 @@ class GameBoard(tk.Frame):
                 "width": self.pen_width
             }
         }
-        request = self.controller.client.create_request('game', data)
-        self.controller.client.send_game_data(request)
+        self.controller.client.send_game_data(data)
 
 
 
