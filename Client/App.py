@@ -35,7 +35,7 @@ class App(tk.Tk):
         self.buttons = tk.Frame(self.navbar, bg='gray')
 
         self.exit_button = tk.Button(self.buttons, text='Exit', width=size1[0], height=size1[1],
-                                command=self.destroy)
+                                command=self.quit)
 
         self.home = tk.Button(self.buttons, text='Home', width=size1[0], height=size1[1],
                                 command=lambda: self.show_frame(HomePage))
@@ -57,6 +57,13 @@ class App(tk.Tk):
         self.client.username = 'Guest'
         self.client.logged_in = False
         self.show_frame(HomePage)
+
+    def exit(self):
+        if self.client.Lobby is not None and self.client.Lobby.GIM:
+            request = {
+                'action': 'disconnect'
+            }
+            self.client.send_game_data(request)
 
     def refresh_navbar(self):
         for button in self.buttons.winfo_children():
@@ -590,9 +597,9 @@ class GameBoard(tk.Frame):
             frame = tk.Frame(self.player_frame)
             label = tk.Label(frame, text=player)
 
-            button = tk.Button(frame, text='remove',
-                               command=lambda p=player: self.controller.client.Lobby.remove_player(p))
             if player == self.controller.client.Lobby.host:
+                button = tk.Button(frame, text='remove',
+                               command=lambda p=player: self.controller.client.Lobby.remove_player(p))
                 frame.config(bg='yellow')
                 label.config(bg='yellow')
                 button.grid(row=1, column=0, sticky='n')

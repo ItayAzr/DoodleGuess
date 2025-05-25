@@ -1,5 +1,6 @@
 import base64
 import json
+import random
 import time
 
 from Server.User import User
@@ -50,8 +51,9 @@ class Server:
         try:
             print(f"New connection from {user.get_data('username')} \n")
             if self.key_exchange(user, manager):
-                while True:
+                while user in self.active_users:
                     if user.lobby is None or not user.lobby.GIM:
+
                         request = user.get_request()
                         if request is None:
                             continue
@@ -92,6 +94,7 @@ class Server:
         finally:
             if user.lobby is not None:
                 self.check_empty_lobby(user.lobby.id)
+
             # When client disconnects, remove them from active list
             if user in self.active_users:
                 self.active_users.remove(user)
@@ -138,6 +141,7 @@ class Server:
 
     def game_loop(self, lobby: Lobby):
         for game_round in range(lobby.rounds):
+            lobby.in_round = True
             lobby.word = lobby.get_draw_word()
             guesser = {
                 'action': 'update',
@@ -176,6 +180,22 @@ class Server:
         while lobby.in_round:
             try:
                 request = user.get_request(game_request=True)
+                if 'action' not in request:
+                    continue
+
+                if request['action'] == 'disconnect' or request['action'] == 'leave':
+                    lobby.remove_player(username)
+                    empty = self.check_empty_lobby(lobby.id)
+                    if empty:
+                        return
+                    host = random.choice(lobby.playerList)
+                    data = {'action':'update', 'remove_player': 'username', 'host': host, 'skip': 'True'}
+                    self.game_broadcast(data, lobby, username)
+                    if request['action'] == 'disconnect':
+                        self.active_users.remove(user)
+                        return
+
+
                 if username == lobby.host:
                     self.game_broadcast({'data': request, 'turn': 'no', 'skip': 'True'}, lobby, username)
                 elif 'guess' in request:
@@ -191,11 +211,10 @@ class Server:
                             }
                         user.send_game_data(data)
 
-
             except Exception as e:
                 pass
 
-    def check_empty_lobby(self, lobby_id, lobby=None):
+    def check_empty_lobby(self, lobby_id, lobby=None) -> bool:
         if lobby is not None:
             if len(lobby.playerList) == 0:
                 self.lobbies.remove(lobby)

@@ -50,14 +50,10 @@ class Lobby:
         return player_frame
 
     def remove_player(self, username):
-        for player in self.playerList:
-            if player == username:
-                self.playerList.pop()
-            if player in self.scores:
-                self.scores.pop(player)
-            if player == self.host:
-                return self.update_host()
-        self.update_player_frame()
+        self.playerList.remove(username)
+        self.scores.pop(username)
+        if username == self.host:
+            return self.update_host()
         return None
 
     def check_user(self, user):
@@ -101,7 +97,6 @@ class Lobby:
                 self.GIM = True
 
     def update_host(self):
-        self.playerList.remove(self.host)
         new_host = random.choice(self.playerList)
         self.host = new_host
         return new_host
