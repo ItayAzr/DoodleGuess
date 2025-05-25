@@ -480,10 +480,12 @@ class LobbyPage(tk.Frame):
         while self.controller.client.Lobby.waiting:
             try:
                 message = self.controller.client.game_listen()
-
+                if 'error' in message:
+                    print(message['error'])
+                    break
                 action = message.pop('action')
                 if action == 'update':
-                    self.controller.client.Lobby.update(message['data'])
+                    self.controller.client.Lobby.update(message)
 
                 if self.controller.client.Lobby.host == self.controller.client.username:
                     self.start_button.grid(row=1, column=0, sticky='n')
@@ -577,8 +579,9 @@ class GameBoard(tk.Frame):
         while True:
             if not self.can_draw:
                 message = self.controller.client.game_listen()
-                if message is None:
-                    pass
+                if 'error' in message:
+                    print(message['error'])
+                    break
                 if message['turn'] == 'yes':
                     self.can_draw = True
                     self.word = message['word']

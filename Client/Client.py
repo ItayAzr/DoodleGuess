@@ -106,6 +106,8 @@ class Client:
                     else:
                         # Nothing received — check if game should exit or update UI
                         continue
+                except ConnectionResetError:
+                    return {'error': 'connection closed'}
                 except Exception as e:
                     print(e)
                     break
