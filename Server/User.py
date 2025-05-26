@@ -115,11 +115,13 @@ class User:
             # Step 2: Receive the complete JSON message
             data = self.recv_all(msg_length)
 
+            if data is None:
+                return None
+
             if game_request:
                 return json.loads(data.decode('utf-8'))
 
-            if data is None:
-                return None
+
             print(type(data))
 
             if 'aes_key' in self.data.keys():

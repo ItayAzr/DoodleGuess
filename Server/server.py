@@ -199,6 +199,7 @@ class Server:
 
                 if username == lobby.drawer and request.get('action') in ('draw', 'clear'):
                     request['skip'] = 'True'
+                    self.game_broadcast(request, lobby, username)
                 elif 'guess' in request:
                     if username not in lobby.guessed:
                         if request['guess'] == lobby.word:
