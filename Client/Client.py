@@ -97,9 +97,9 @@ class Client:
                 try:
                     timeout = 0.7
                     if self.Lobby.GIM:
-                        timeout = 0.1
+                        timeout = 0.4
 
-                    ready ,_ ,_ = select.select([self.soc],[],[], timeout)
+                    ready, _, _ = select.select([self.soc],[],[], timeout)
                     # Receive response length first
                     if ready:
                         print('waiting for response from the server...')
@@ -120,23 +120,24 @@ class Client:
     def listen(self, encrypt: bool = True):
         while True:
             try:
+                ready, _, _ = select.select([self.soc], [], [], 0.8)
                 # Receive response length first
-                print('waiting for response from the server...')
-                response_length_data = self.soc.recv(4)
+                if ready:
+                    print('waiting for response from the server...')
+                    response_length_data = self.soc.recv(4)
 
-                response_length = struct.unpack("!I", response_length_data)[0]
-                print(f"Expecting {response_length} bytes...")
-
-                # Receive full response data
-                response_data = b""
-                while len(response_data) < response_length:
-                    chunk = self.soc.recv(response_length - len(response_data))
-                    if not chunk:
-                        break
-                    response_data += chunk
-                if encrypt:
-                    return self.decrypt_message(response_data)
-                return json.loads(response_data.decode('utf-8'))
+                    response_length = struct.unpack("!I", response_length_data)[0]
+                    print(f"Expecting {response_length} bytes...")
+                    # Receive full response data
+                    response_data = b""
+                    while len(response_data) < response_length:
+                        chunk = self.soc.recv(response_length - len(response_length))
+                        if not chunk:
+                            break
+                        response_data += chunk
+                    if encrypt:
+                        return self.decrypt_message(response_data)
+                    return json.loads(response_data.decode('utf-8'))
             except ConnectionResetError as e:
                 print('connection to server closed')
                 return {'error': 'disconnected from server'}
