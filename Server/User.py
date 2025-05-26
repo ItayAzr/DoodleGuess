@@ -194,7 +194,7 @@ class User:
             return False
 
     def send_game_data(self, data):
-        response = self.encrypt_message(data).encode('utf-8')
+        response = json.loads(data).encode('utf-8')
         # Send the message length first (4 bytes)
         self.connection.send(struct.pack("!I", len(response)))
         # Send the response to the client.
