@@ -200,6 +200,7 @@ class Server:
 
                 if username == lobby.host:
                     self.game_broadcast(request, lobby, username)
+
                 elif 'guess' in request:
                     if username not in lobby.guessed:
                         if request['guess'] == lobby.word:

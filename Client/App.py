@@ -645,8 +645,6 @@ class GameBoard(tk.Frame):
             frame.grid(row=row, sticky='nesw')
             row += 1
 
-
-
     def run(self):
         print('game started')
         while True:
