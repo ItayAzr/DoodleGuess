@@ -118,10 +118,6 @@ class User:
             if data is None:
                 return None
 
-            if game_request:
-                return json.loads(data.decode('utf-8'))
-
-
             print(type(data))
 
             if 'aes_key' in self.data.keys():
@@ -129,6 +125,8 @@ class User:
             else:
                 request = json.loads(data.decode('utf-8'))
             print(f'request: {request}')
+            if game_request:
+                return request
 
             if 'checksum' not in request.keys():
                 self.send_response("Bad Request", 'missing checksum value')
@@ -192,14 +190,13 @@ class User:
         except Exception as e:
             # print the exception
             print(e)
-
             return False
 
     def send_game_data(self, data):
         # 1) serialize
-        raw = json.dumps(data).encode('utf-8')
+        encrypted_data = self.encrypt_message(data).encode('utf-8')
         # 2) send length prefix
-        self.connection.send(struct.pack("!I", len(raw)))
+        self.connection.send(struct.pack("!I", len(encrypted_data)))
         # 3) send the JSON bytes
-        self.connection.sendall(raw)
+        self.connection.sendall(encrypted_data)
         print(f'sent game data: {data}')

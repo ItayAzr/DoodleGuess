@@ -54,7 +54,7 @@ class Client:
 
             print(e)
 
-    def decrypt_message(self, encrypted_data: bytes):
+    def decrypt_message(self, encrypted_data: bytes) -> dict:
         """
         Decrypts a base64-encoded JSON message (nonce + ciphertext + tag).
         Returns a Python dictionary.
@@ -109,7 +109,7 @@ class Client:
                         print(f"Expecting {data_length} bytes...")
 
                         data = self.soc.recv(data_length)
-                        return json.loads(data.decode())
+                        return self.decrypt_message(data)
 
                 except ConnectionResetError:
                     return {'error': 'connection closed'}
@@ -143,14 +143,16 @@ class Client:
             except Exception as e:
                 print(e)
 
-    def send_game_data(self, data):
-        request = json.dumps(data).encode('utf-8')
-        # Step 1: Send the message length first (4 bytes)
-        self.soc.send(struct.pack("!I", len(request)))
-        # Step 2: Send the actual JSON data
-        self.soc.sendall(request)
+    def send_game_data(self, request):
+        data = self.encrypt_message(request).encode('utf-8')
+        print(f'encrypted request: {type(data)}, {data}')
 
-        print(f'game data sent {data}')
+        # Step 1: Send the message length first (4 bytes)
+
+        self.soc.send(struct.pack("!I", len(data)))
+        # Step 2: Send the actual JSON data
+        self.soc.sendall(data)
+        print('request sent')
 
     def send_data(self, request: dict, encrypt: bool = True):
         """
@@ -172,6 +174,7 @@ class Client:
         # Step 2: Send the actual JSON data
         self.soc.sendall(data)
         print('request sent')
+
         response = self.listen(encrypt)
         print(f'response: {response}')
         if 'checksum' not in response or 'error' in response:
