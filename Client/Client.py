@@ -140,7 +140,12 @@ class Client:
                 print(e)
 
     def send_game_data(self, data):
-        self.soc.sendall(json.dumps(data).encode())
+        request = json.dumps(data).encode('utf-8')
+        # Step 1: Send the message length first (4 bytes)
+        self.soc.send(struct.pack("!I", len(request)))
+        # Step 2: Send the actual JSON data
+        self.soc.sendall(request)
+
         print(f'game data sent {data}')
 
     def send_data(self, request: dict, encrypt: bool = True):

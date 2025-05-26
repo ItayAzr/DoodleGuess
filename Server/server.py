@@ -156,6 +156,7 @@ class Server:
                 'turn': 'yes',
                 'skip': 'no'
             }
+
             # chooses the drawer and sends the word and word length
             for player in lobby.playerList:
                 for user in self.active_users:
@@ -167,8 +168,8 @@ class Server:
                             guesser['drawer'] = player
                             user.send_game_data(drawer)
                             self.game_broadcast(guesser, lobby, username)
-                    thread = threading.Thread(target=self.handle_player, args=(user, username, lobby))
-                    thread.start()
+                        thread = threading.Thread(target=self.handle_player, args=(user, username, lobby))
+                        thread.start()
 
                 start_time = time.time()
                 while time.time() - start_time <= lobby.time_limit:
@@ -180,7 +181,8 @@ class Server:
         while lobby.in_round:
             try:
                 request = user.get_request(game_request=True)
-                if 'action' not in request:
+
+                if request is None or 'action' not in request:
                     continue
 
                 if request['action'] == 'disconnect' or request['action'] == 'leave':

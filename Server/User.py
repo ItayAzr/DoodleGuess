@@ -103,43 +103,41 @@ class User:
     # receives requests from client
     def get_request(self, game_request=False) -> dict or None:
         try:
+            # Step 1: Receive the message length (4 bytes)
+            msg_length_data = self.recv_all(4)
+            if not msg_length_data:
+                print("Connection closed before receiving length")
+                return None
+
+            msg_length = struct.unpack("!I", msg_length_data)[0]  # Convert 4 bytes to integer
+            print(f"Expecting {msg_length} bytes...")
+
+            # Step 2: Receive the complete JSON message
+            data = self.recv_all(msg_length)
+
             if game_request:
-                request_data = self.connection.recv(1024)
-                request = json.loads(request_data.decode())
-                return request
+                return json.loads(data.decode('utf-8'))
+
+            if data is None:
+                return None
+            print(type(data))
+
+            if 'aes_key' in self.data.keys():
+                request = self.decrypt_message(data)
             else:
-                # Step 1: Receive the message length (4 bytes)
-                msg_length_data = self.recv_all(4)
-                if not msg_length_data:
-                    print("Connection closed before receiving length")
-                    return None
+                request = json.loads(data.decode('utf-8'))
+            print(f'request: {request}')
 
-                msg_length = struct.unpack("!I", msg_length_data)[0]  # Convert 4 bytes to integer
-                print(f"Expecting {msg_length} bytes...")
-
-                # Step 2: Receive the complete JSON message
-                data = self.recv_all(msg_length)
-
-                if data is None:
-                    return None
-                print(type(data))
-
-                if 'aes_key' in self.data.keys():
-                    request = self.decrypt_message(data)
+            if 'checksum' not in request.keys():
+                self.send_response("Bad Request", 'missing checksum value')
+            else:
+                checksum = request['checksum']
+                request.pop('checksum')
+                current_checksum = hashlib.sha256(json.dumps(request).encode()).hexdigest()
+                if current_checksum == checksum:
+                    return request
                 else:
-                    request = json.loads(data.decode('utf-8'))
-                print(f'request: {request}')
-
-                if 'checksum' not in request.keys():
-                    self.send_response("Bad Request", 'missing checksum value')
-                else:
-                    checksum = request['checksum']
-                    request.pop('checksum')
-                    current_checksum = hashlib.sha256(json.dumps(request).encode()).hexdigest()
-                    if current_checksum == checksum:
-                        return request
-                    else:
-                        self.send_response("Bad Request", 'incomplete request')
+                    self.send_response("Bad Request", 'incomplete request')
 
         except ConnectionResetError:
             # if the connection is reset, return None

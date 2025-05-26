@@ -5,9 +5,6 @@ import tkinter as tk
 from tkinter import ttk, colorchooser, messagebox
 import hashlib
 
-from pygments.lexers import guess_lexer
-from scapy.contrib.pnio_dcp import guess_dcp_block_class
-
 from Client import Client
 
 
@@ -635,7 +632,8 @@ class GameBoard(tk.Frame):
         row = 0
         for player in self.controller.client.Lobby.playerList:
             frame = tk.Frame(self.player_frame)
-            label = tk.Label(frame, text=player)
+            score = self.controller.client.Lobby.scores[player]
+            label = tk.Label(frame, text=f'{player}, score: {score}')
 
             if self.controller.client.username == self.controller.client.Lobby.host:
                 button = tk.Button(frame, text='remove',
