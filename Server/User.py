@@ -194,10 +194,10 @@ class User:
             return False
 
     def send_game_data(self, data):
-        response = json.loads(data).encode('utf-8')
-        # Send the message length first (4 bytes)
-        self.connection.send(struct.pack("!I", len(response)))
-        # Send the response to the client.
-        self.connection.sendall(response)
+        # 1) serialize
+        raw = json.dumps(data).encode('utf-8')
+        # 2) send length prefix
+        self.connection.send(struct.pack("!I", len(raw)))
+        # 3) send the JSON bytes
+        self.connection.sendall(raw)
         print(f'sent game data: {data}')
-

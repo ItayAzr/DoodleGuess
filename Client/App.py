@@ -613,7 +613,7 @@ class GameBoard(tk.Frame):
         clear_btn = tk.Button(tool_frame, text="Clear Canvas", command=self.clear_canvas)
         clear_btn.grid(row=0, column=3, padx=5)
 
-        eraser_button = tk.Button(tool_frame, text="eraser", command=lambda: self.eraser)
+        eraser_button = tk.Button(tool_frame, text="eraser", command=self.eraser)
         eraser_button.grid(row=0, column=4, padx=5)
 
         # Mouse event bindings

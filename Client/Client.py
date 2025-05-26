@@ -95,7 +95,11 @@ class Client:
         if self.Lobby is not None:
             while self.Lobby.waiting or self.Lobby.GIM:
                 try:
-                    ready ,_ ,_ = select.select([self.soc],[],[])
+                    timeout = 0.7
+                    if self.Lobby.GIM:
+                        timeout = 0.1
+
+                    ready ,_ ,_ = select.select([self.soc],[],[], timeout)
                     # Receive response length first
                     if ready:
                         print('waiting for response from the server...')
@@ -105,7 +109,7 @@ class Client:
                         print(f"Expecting {data_length} bytes...")
 
                         data = self.soc.recv(data_length)
-                        return data
+                        return json.loads(data.decode())
 
                 except ConnectionResetError:
                     return {'error': 'connection closed'}
@@ -182,7 +186,6 @@ class Client:
                 return None
 
     def set_lobby(self, lobby):
-        print(pickle.loads(lobby))
         self.Lobby = pickle.loads(lobby)
         print(self.Lobby)
 

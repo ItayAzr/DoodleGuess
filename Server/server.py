@@ -197,10 +197,8 @@ class Server:
                         self.active_users.remove(user)
                         return
 
-
-                if username == lobby.host:
-                    self.game_broadcast(request, lobby, username)
-
+                if username == lobby.drawer and request.get('action') in ('draw', 'clear'):
+                    request['skip'] = 'True'
                 elif 'guess' in request:
                     if username not in lobby.guessed:
                         if request['guess'] == lobby.word:
