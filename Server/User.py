@@ -127,8 +127,7 @@ class User:
             print(f'request: {request}')
             if game_request:
                 return request
-
-            if 'checksum' not in request.keys():
+            elif 'checksum' not in request.keys():
                 self.send_response("Bad Request", 'missing checksum value')
             else:
                 checksum = request['checksum']

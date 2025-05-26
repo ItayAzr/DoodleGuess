@@ -131,7 +131,7 @@ class Client:
                     # Receive full response data
                     response_data = b""
                     while len(response_data) < response_length:
-                        chunk = self.soc.recv(response_length - len(response_length))
+                        chunk = self.soc.recv(response_length - len(response_data))
                         if not chunk:
                             break
                         response_data += chunk
@@ -147,9 +147,7 @@ class Client:
     def send_game_data(self, request):
         data = self.encrypt_message(request).encode('utf-8')
         print(f'encrypted request: {type(data)}, {data}')
-
         # Step 1: Send the message length first (4 bytes)
-
         self.soc.send(struct.pack("!I", len(data)))
         # Step 2: Send the actual JSON data
         self.soc.sendall(data)
@@ -195,12 +193,15 @@ class Client:
 
     @staticmethod
     def create_request(action: str, data: dict = None) -> dict:
-        if data is None:
-            data = {}
-        request = {
-            "request": action,
-            'data': data
-        }
+        if action is None:
+            request = data
+        else:
+            if data is None:
+                data = {}
+            request = {
+                "request": action,
+                'data': data
+            }
         checksum = hashlib.sha256(json.dumps(request).encode('utf-8')).hexdigest()
         # add the checksum to the response
         request["checksum"] = checksum

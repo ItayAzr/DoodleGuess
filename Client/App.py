@@ -731,7 +731,8 @@ class GameBoard(tk.Frame):
                 "width": self.pen_width
             }
         }
-        self.controller.client.send_game_data(data)
+        request = self.controller.client.create_request(data)
+        self.controller.client.send_game_data(request)
 
 
 

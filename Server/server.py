@@ -180,7 +180,7 @@ class Server:
     def handle_player(self, user: User, username, lobby: Lobby):
         while lobby.in_round:
             try:
-                request = user.get_request(game_request=True)
+                request = user.get_request(True)
 
                 if request is None or 'action' not in request:
                     continue
