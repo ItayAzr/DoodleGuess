@@ -450,6 +450,14 @@ class LobbyPage(tk.Frame):
         self.start_button = tk.Button(self,  text="Start Game", width=2*size1[0], height=2*size1[1], command=self.start)
 
         self.f_players = tk.Frame(self)
+        self.f_players.grid_rowconfigure(0, weight=1)
+        self.f_players.grid_rowconfigure(1, weight=1)
+        self.f_players.grid_columnconfigure(0, weight=1)
+        self.f_players.grid_columnconfigure(1, weight=1)
+        self.f_players.grid_columnconfigure(2, weight=1)
+        self.f_players.grid_columnconfigure(3, weight=1)
+        self.f_players.grid_columnconfigure(4, weight=1)
+
         self.update_players_frame()
         self.f_players.grid()
 
@@ -469,13 +477,15 @@ class LobbyPage(tk.Frame):
             frame = tk.Frame(self.f_players)
             label = tk.Label(frame, text=player)
 
-
             if player == self.controller.client.Lobby.host:
-                button = tk.Button(frame, text='remove',
-                                   command=lambda p=player: self.controller.client.Lobby.remove_player(p))
                 frame.config(bg='yellow')
                 label.config(bg='yellow')
+
+            if self.controller.client.username == self.controller.client.Lobby.host:
+                button = tk.Button(frame, text='remove',
+                                   command=lambda p=player: self.controller.client.Lobby.remove_player(p))
                 button.grid(row=1, column=0, sticky='n')
+
             label.grid(row=0, column=0, sticky='nesw')
             frame.grid(row=row, column=column, sticky='nesw')
             if column < 5:
@@ -545,13 +555,17 @@ class GameBoard(tk.Frame):
         self.pen_color = "black"
         self.pen_width = 3
 
+        text = ' _ '
+        self.word_label = tk.Label(self, text=text, bg='lightblue')
+        self.word_label.grid()
+
         # Canvas setup
         self.canvas = tk.Canvas(self, bg="white", width=800, height=600)
-        self.canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        self.canvas.grid(row=1, column=1,sticky='nesw')
 
         # Tool panel
         tool_frame = tk.Frame(self, padx=10, pady=10)
-        tool_frame.pack(side=tk.RIGHT, fill=tk.Y)
+        tool_frame.grid(row=2, column=1, sticky='ew')
 
         # Color button
         color_btn = tk.Button(tool_frame, text="Pick Color", command=self.pick_color)
@@ -562,7 +576,7 @@ class GameBoard(tk.Frame):
         self.size_slider.set(self.pen_width)
         self.size_slider.pack(pady=5)
 
-        self.label = tk.Label(self, text="enter your guess")
+        self.label = tk.Label(tool_frame, text="enter your guess")
         self.guess_entry = tk.Entry(tool_frame)
 
         if not self.can_draw:
@@ -570,6 +584,13 @@ class GameBoard(tk.Frame):
             self.guess_entry.pack(pady=5)
 
         self.player_frame = tk.Frame(self)
+        self.player_frame.grid_rowconfigure(0, weight=1)
+        self.player_frame.grid_rowconfigure(1, weight=1)
+        self.player_frame.grid_rowconfigure(2, weight=1)
+        self.player_frame.grid_rowconfigure(3, weight=1)
+        self.player_frame.grid_rowconfigure(4, weight=1)
+        self.update_players_frame()
+        self.player_frame.grid(row=1, column=0, sticky='ns')
 
         self.guess_button = tk.Button(self, text="Submit guess", command=self.set_guess)
 
@@ -598,7 +619,7 @@ class GameBoard(tk.Frame):
             frame = tk.Frame(self.player_frame)
             label = tk.Label(frame, text=player)
 
-            if player == self.controller.client.Lobby.host:
+            if self.controller.client.username == self.controller.client.Lobby.host:
                 button = tk.Button(frame, text='remove',
                                command=lambda p=player: self.controller.client.Lobby.remove_player(p))
                 frame.config(bg='yellow')
@@ -614,32 +635,36 @@ class GameBoard(tk.Frame):
         print('game started')
         while True:
             try:
-                if not self.can_draw:
-                    message = self.controller.client.game_listen()
-                    if 'error' in message:
-                        print(message['error'])
-                        break
-
+                message = self.controller.client.game_listen()
+                if 'error' in message:
+                    print(message['error'])
+                    break
+                if 'turn' in message:
+                    text = ''
                     if message['turn'] == 'yes':
                         self.can_draw = True
                         self.word = message['word']
+                        text = self.word
                     if message['turn'] == 'no':
                         self.can_draw = False
                         self.word_len = message['word_length']
+                        for i in range(self.word_len):
+                            text += '_ '
+                self.word_label.config(text=self.word)
 
-                    if 'action' in message:
-                        action = message['action']
-                        if action == 'update':
-                            self.controller.client.Lobby.update(message['data'])
-                        elif action == 'draw':
-                            self.canvas.create_line(
-                                message['line_data']['x1'], message['line_data']['y1'],
-                                message['line_data']['x2'], message['line_data']['y2'],
-                                fill=message['line_data']['color'],
-                                width=message['line_data']['width']
-                            )
-                        elif action == 'clear':
-                            self.canvas.delete("all")
+                if 'action' in message:
+                    action = message['action']
+                    if action == 'update':
+                        self.controller.client.Lobby.update(message['data'])
+                    elif action == 'draw':
+                        self.canvas.create_line(
+                            message['line_data']['x1'], message['line_data']['y1'],
+                            message['line_data']['x2'], message['line_data']['y2'],
+                            fill=message['line_data']['color'],
+                            width=message['line_data']['width']
+                        )
+                    elif action == 'clear':
+                        self.canvas.delete("all")
             except Exception as e:
                 pass
 
@@ -660,7 +685,8 @@ class GameBoard(tk.Frame):
     def clear_canvas(self):
         self.canvas.delete("all")
         data = {
-            "action": "clear"
+            "action": "clear",
+            "skip": "True"
         }
         self.controller.client.send_game_data(data)
 
@@ -680,7 +706,8 @@ class GameBoard(tk.Frame):
         self.last_x, self.last_y = event.x, event.y
 
         data = {
-            "action": "draw",
+            'action': 'draw',
+            'skip': 'true',
             'line_data': {
                 "x1": self.last_x,
                 "y1": self.last_y,
