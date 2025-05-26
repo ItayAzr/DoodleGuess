@@ -4,6 +4,10 @@ import threading
 import tkinter as tk
 from tkinter import ttk, colorchooser, messagebox
 import hashlib
+
+from pygments.lexers import guess_lexer
+from scapy.contrib.pnio_dcp import guess_dcp_block_class
+
 from Client import Client
 
 
@@ -586,12 +590,17 @@ class GameBoard(tk.Frame):
         self.size_slider.set(self.pen_width)
         self.size_slider.grid(row=0, column=1, padx=5)
 
+        self.guessBox = tk.Frame(tool_frame)
+        self.guessBox.grid(row=0, column=2, padx=5)
         self.label = tk.Label(tool_frame, text="enter your guess")
         self.guess_entry = tk.Entry(tool_frame)
+        self.guess_button = tk.Button(tool_frame, text="Submit guess", command=self.set_guess)
+
 
         if not self.can_draw:
-            self.label.pack()
-            self.guess_entry.grid(row=0, column=2, padx=5)
+            self.label.grid(row=0)
+            self.guess_entry.grid(row=1)
+            self.guess_button.grid(row=0, column=5, padx=5)
 
         self.player_frame = tk.Frame(self)
         self.player_frame.grid_rowconfigure(0, weight=1)
@@ -602,14 +611,13 @@ class GameBoard(tk.Frame):
         self.update_players_frame()
         self.player_frame.grid(row=1, column=0, sticky='ns')
 
-        self.guess_button = tk.Button(self, text="Submit guess", command=self.set_guess)
 
         # Clear button
         clear_btn = tk.Button(tool_frame, text="Clear Canvas", command=self.clear_canvas)
-        clear_btn.pack(pady=20)
+        clear_btn.grid(row=0, column=3, padx=5)
 
         eraser_button = tk.Button(tool_frame, text="eraser", command=lambda: self.eraser)
-        eraser_button.pack(pady=20)
+        eraser_button.grid(row=0, column=4, padx=5)
 
         # Mouse event bindings
         self.canvas.bind("<Button-1>", self.on_click)
