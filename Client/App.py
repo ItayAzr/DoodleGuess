@@ -546,6 +546,11 @@ class GameBoard(tk.Frame):
         self.controller = controller
         self.config(background='lightblue')
 
+        self.grid_columnconfigure(0, weight=1)
+        self.grid_columnconfigure(1, weight=9)
+        self.grid_rowconfigure(0, weight=1)
+        self.grid_rowconfigure(1, weight=9)
+
         self.can_draw = False
         self.word = ''
         self.word_len = 0
@@ -559,29 +564,34 @@ class GameBoard(tk.Frame):
         self.word_label = tk.Label(self, text=text, bg='lightblue')
         self.word_label.grid()
 
+        self.frame = tk.Frame(self)
+        self.frame.grid_columnconfigure(0, weight=1)
+        self.frame.grid_rowconfigure(0, weight=9)
+        self.frame.grid_rowconfigure(1, weight=1)
+        self.frame.grid(row=1, column=1)
         # Canvas setup
-        self.canvas = tk.Canvas(self, bg="white", width=800, height=600)
-        self.canvas.grid(row=1, column=1,sticky='nesw')
+        self.canvas = tk.Canvas(self.frame, bg="white", width=800, height=600)
+        self.canvas.grid(row=0, column=0, sticky='nesw')
 
         # Tool panel
-        tool_frame = tk.Frame(self, padx=10, pady=10)
-        tool_frame.grid(row=2, column=1, sticky='ew')
+        tool_frame = tk.Frame(self.frame, padx=10, pady=10)
+        tool_frame.grid(row=1, column=0, sticky='ew')
 
         # Color button
         color_btn = tk.Button(tool_frame, text="Pick Color", command=self.pick_color)
-        color_btn.pack(pady=5)
+        color_btn.grid(row=0, column=0, padx=5)
 
         # Pen size slider
         self.size_slider = tk.Scale(tool_frame, from_=1, to=6, orient=tk.HORIZONTAL, label="Pen Size")
         self.size_slider.set(self.pen_width)
-        self.size_slider.pack(pady=5)
+        self.size_slider.grid(row=0, column=1, padx=5)
 
         self.label = tk.Label(tool_frame, text="enter your guess")
         self.guess_entry = tk.Entry(tool_frame)
 
         if not self.can_draw:
             self.label.pack()
-            self.guess_entry.pack(pady=5)
+            self.guess_entry.grid(row=0, column=2, padx=5)
 
         self.player_frame = tk.Frame(self)
         self.player_frame.grid_rowconfigure(0, weight=1)
