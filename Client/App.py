@@ -456,8 +456,8 @@ class LobbyPage(tk.Frame):
         if self.controller.client.Lobby.host == self.controller.client.username:
             self.start_button.grid(row=1, column=0, sticky='n')
 
-        self.thread = threading.Thread(target=self.run)
-        self.thread.start()
+        thread = threading.Thread(target=self.run)
+        thread.start()
 
     def update_players_frame(self):
         row = 0
@@ -468,6 +468,7 @@ class LobbyPage(tk.Frame):
             label.grid()
             if player == self.controller.client.Lobby.host:
                 frame.config(bg='yellow')
+                label.config(bg='yellow')
             frame.grid(row=row, column=column, sticky='nesw')
             if column < 5:
                 column += 1
@@ -508,7 +509,7 @@ class LobbyPage(tk.Frame):
             }
             request = self.controller.client.create_request('start_game', data)
             print('request sent')
-            response = self.controller.client.send_data(request, True)
+            response = self.controller.client.send_data(request, game=True)
             print(f'response: {response}')
 
             if response is not None and response['status'] == 'success':
@@ -541,36 +542,46 @@ class GameBoard(tk.Frame):
         self.pen_color = "black"
         self.pen_width = 3
 
+        self.Frame = tk.Frame(self)
+        self.grid(row=0, column=1, sticky='nesw')
+
         # Canvas setup
-        self.canvas = tk.Canvas(self, bg="white", width=800, height=600)
-        self.canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        self.canvas = tk.Canvas(self.Frame, bg="white", width=1200, height=800)
+        self.canvas.grid(row=0, column=1, sticky='nesw')
+
+        self.players_frame = tk.Frame(self)
+        self.update_players_frame()
+        self.players_frame.grid(row=0, column=0, sticky='ns')
 
         # Tool panel
-        tool_frame = tk.Frame(self, padx=10, pady=10)
-        tool_frame.pack(side=tk.RIGHT, fill=tk.Y)
+        tool_frame = tk.Frame(self.Frame, padx=10, pady=10)
+        tool_frame.grid(row=1, column=1, sticky='ew')
 
         # Color button
         color_btn = tk.Button(tool_frame, text="Pick Color", command=self.pick_color)
-        color_btn.pack(pady=5)
+        color_btn.grid(column=0)
 
         # Pen size slider
         self.size_slider = tk.Scale(tool_frame, from_=1, to=6, orient=tk.HORIZONTAL, label="Pen Size")
         self.size_slider.set(self.pen_width)
-        self.size_slider.pack(pady=5)
-
-        self.label = tk.Label(self, text="enter your guess")
-        self.label.pack()
-        self.guess_entry = tk.Entry(tool_frame)
-        self.guess_entry.pack(pady=5)
-
-        self.guess_button = tk.Button(self, text="Submit guess", command=self.set_guess)
+        self.size_slider.grid(column=1)
 
         # Clear button
         clear_btn = tk.Button(tool_frame, text="Clear Canvas", command=self.clear_canvas)
-        clear_btn.pack(pady=20)
+        clear_btn.grid(column=2)
 
         eraser_button = tk.Button(tool_frame, text="eraser", command=lambda: self.eraser)
-        eraser_button.pack(pady=20)
+        eraser_button.grid(column=3)
+
+        #guess label, entry, and button
+        self.label = tk.Label(tool_frame, text="enter your guess")
+        self.label.grid(column=4)
+
+        self.guess_entry = tk.Entry(tool_frame)
+        self.guess_entry.grid(column=5)
+
+        self.guess_button = tk.Button(tool_frame, text="Submit guess", command=self.set_guess)
+        self.guess_button.grid(column=6)
 
         # Mouse event bindings
         self.canvas.bind("<Button-1>", self.on_click)
@@ -583,24 +594,44 @@ class GameBoard(tk.Frame):
         thread = threading.Thread(target=self.run)
         thread.start()
 
+    def update_players_frame(self):
+        row = 0
+        for player in self.controller.client.Lobby.playerList:
+            frame = tk.Frame(self.players_frame, height=5, width=10)
+            name = tk.Label(frame, text=player)
+            score = tk.Label(frame, text=self.controller.client.Lobby.scores[player])
+            name.grid()
+            score.grid(row=1)
+            if player == self.controller.client.Lobby.host:
+                frame.config(bg='yellow')
+                name.config(bg='yellow')
+                score.config(bg='yellow')
+            if player == self.controller.client.Lobby.drawer:
+                frame.config(bg='yellow')
+                name.config(bg='yellow')
+                score.config(bg='yellow')
+            frame.grid(row=row, sticky='n')
+            row += 1
+
     def run(self):
         while True:
-            if not self.can_draw:
-                message = self.controller.client.game_listen()
-                if message:
-                    if 'error' in message:
-                        print(message['error'])
+            message = self.controller.client.game_listen()
+            if message:
+                if 'error' in message:
+                    print(message['error'])
+                else:
+                    if message['turn'] == 'yes':
+                        self.can_draw = True
+                        self.word = message['data']['word']
                     else:
-                        action = message['data'].pop('action')
-                        if action == 'update':
-                            self.controller.client.Lobby.update(message['data'])
+                        self.can_draw = False
+                        self.word_len = message['data']['word_length']
 
-                        if message['turn'] == 'yes':
-                            self.can_draw = True
-                            self.word = message['data']['word']
-                        else:
-                            self.can_draw = False
-                            self.word_len = message['data']['word_length']
+                    if 'action' in message:
+                        action = message['data'].pop('action')
+                        print(message['data'].pop('msg'))
+                        if action == 'update':
+                            self.controller.client.Lobby.update(message['data'])\
 
                         if action == 'update':
                             self.controller.client.Lobby.update(message['data'])
@@ -635,7 +666,7 @@ class GameBoard(tk.Frame):
             "action": "clear"
         }
         request = self.controller.client.create_request('game', data)
-        self.controller.client.send_data(request)
+        self.controller.client.send_data(request, game=True)
 
     def on_click(self, event):
         if not self.can_draw:
@@ -662,7 +693,7 @@ class GameBoard(tk.Frame):
             }
         }
         request = self.controller.client.create_request('game', data)
-        self.controller.client.send_data(request)
+        self.controller.client.send_data(request, game=True)
 
 
 

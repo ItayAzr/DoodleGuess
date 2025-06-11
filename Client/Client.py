@@ -116,9 +116,10 @@ class Client:
                 try:
                     print('waiting for response from the server...')
                     response_length_data = self.recv_all(4)
-                    print(response_length_data)
+
                     response_length = struct.unpack("!I", response_length_data)[0]
                     print(f"Expecting {response_length} bytes...")
+
                 except Exception as e:
                     print(e)
                     return {'error': 'failed to receive msg length'}
@@ -183,7 +184,7 @@ class Client:
         print('request sent')
         response = None
         if game:
-            while response is None:
+            if self.Lobby.waiting:
                 response = self.game_listen()
         else:
             response = self.listen(encrypt)

@@ -10,6 +10,8 @@ class Lobby:
         self.id = lobby_id
         self.host = host
 
+        self.drawer = host
+
         self.max = max_players
         self.time_limit = time_limit
         self.difficulty = difficulty
@@ -123,7 +125,7 @@ class Lobby:
         settings = difficulty_settings.get(self.difficulty, difficulty_settings["easy"])
         topic = random.choice(settings["topics"])
 
-        url = f"https://api.datamuse.com/words?topics={topic}&md=pf&max=100"  # 'md=pf' gives part of speech and frequency
+        url = f"https://api.datamuse.com/words?ml={topic}&md=pf&max=100"  # 'md=pf' gives part of speech and frequency
         try:
             response = requests.get(url)
             if response.status_code == 200:

@@ -125,7 +125,7 @@ class Server:
             if user.lobby.host == user.get_data('username'):
                 thread = threading.Thread(target=self.game_loop, args=(user.lobby,))
                 thread.start()
-                self.game_broadcast(data, user.lobby, user.get_data('username'))
+                self.game_broadcast(data, user.lobby, user.get_data('username'),'success')
                 return 'game started', 'success'
 
             return 'user is not the host of the lobby', 'failed'
@@ -192,7 +192,7 @@ class Server:
                     print('deleted empty lobby')
                     break
 
-    def game_broadcast(self, data: dict, lobby: Lobby, sender: str):
+    def game_broadcast(self, data: dict, lobby: Lobby, sender: str, status: str = ''):
         """
         :param data: the data that the server broadcasts to the players.
         :param lobby: the lobby of the player that sends the request
@@ -205,10 +205,10 @@ class Server:
             for user in self.active_users:
                 if user.get_data('username') in lobby.playerList:
                     if not skip_sender:
-                        user.send_response(msg='game data', data=data)
+                        user.send_response(status=status, msg='game data', data=data)
                     else:
                         if not user.get_data('username') == sender:
-                            user.send_response(msg='game data', data=data)
+                            user.send_response(status=status, msg='game data', data=data)
             return True
         except Exception as e:
             print(e)
