@@ -54,7 +54,7 @@ class Client:
 
             print(e)
 
-    def decrypt_message(self, encrypted_data: bytes):
+    def decrypt_message(self, encrypted_data):
         """
         Decrypts a base64-encoded JSON message (nonce + ciphertext + tag).
         Returns a Python dictionary.
@@ -90,52 +90,78 @@ class Client:
         # Concatenate nonce + ciphertext and base64-encode it
         encrypted = base64.b64encode(nonce + ciphertext).decode("utf-8")
         return encrypted
+
+    def recv_all(self, length):
+        try:
+            data = b''
+            while len(data) < length:
+                chunk = self.soc.recv(length - len(data))
+                if not chunk:
+                    return None  # connection closed
+                data += chunk
+            return data
+        except Exception as e:
+            print(e)
+
     def game_listen(self):
-        if self.Lobby is not None:
-            if self.Lobby.waiting or self.Lobby.GIM:
-                while True:
-                    try:
-                        ready = False
-                        if self.Lobby.waiting:
-                            ready, _, _ = select.select([self.soc], [], [], 0.8)
-                        elif self.Lobby.GIM:
-                            ready, _, _ = select.select([self.soc], [], [], 0.1)
-                        if ready:
-                            data = self.soc.recv(1024)
-                            return json.loads(data.decode())
-                        else:
-                            # Nothing received — check if game should exit or update UI
-                            continue
-                    except Exception as e:
-                        print(e)
+        print('listening for game data...')
+        try:
+            ready = False
+            if self.Lobby.waiting:
+                ready, _, _ = select.select([self.soc], [], [], 1)
+            elif self.Lobby.GIM:
+                ready, _, _ = select.select([self.soc], [], [], 1)
+            if ready:
+                print('ready to receive data')
+                try:
+                    print('waiting for response from the server...')
+                    response_length_data = self.recv_all(4)
+                    print(response_length_data)
+                    response_length = struct.unpack("!I", response_length_data)[0]
+                    print(f"Expecting {response_length} bytes...")
+                except Exception as e:
+                    print(e)
+                    return {'error': 'failed to receive msg length'}
+                response_data = self.recv_all(response_length)
+                if response_data:
+                    print('received response from server')
+                    return self.decrypt_message(response_data.decode('utf-8'))
+                else:
+                    return {'error': 'no data received'}
+        except ConnectionResetError as e:
+            print('connection to server closed')
+            return {'error': 'disconnected from server'}
+        except Exception as e:
+            print(e)
+            return {'error': e}
 
     def listen(self, encrypt: bool = True):
-        while True:
-            try:
-                # Receive response length first
-                print('waiting for response from the server...')
-                response_length_data = self.soc.recv(4)
 
-                response_length = struct.unpack("!I", response_length_data)[0]
-                print(f"Expecting {response_length} bytes...")
+        print('listening...')
+        try:
+            print('waiting for response from the server...')
+            response_length_data = self.recv_all(4)
 
-                # Receive full response data
-                response_data = b""
-                while len(response_data) < response_length:
-                    chunk = self.soc.recv(response_length - len(response_data))
-                    if not chunk:
-                        break
-                    response_data += chunk
+            response_length = struct.unpack("!I", response_length_data)[0]
+            print(f"Expecting {response_length} bytes...")
+
+            # Receive full response data
+            response_data = self.recv_all(response_length)
+            if response_data:
+                print('received response from server')
                 if encrypt:
-                    return self.decrypt_message(response_data)
+                    return self.decrypt_message(response_data.decode('utf-8'))
                 return json.loads(response_data.decode('utf-8'))
-            except ConnectionResetError as e:
-                print('connection to server closed')
-                return {'error': 'disconnected from server'}
-            except Exception as e:
-                print(e)
+            else:
+                return {'error': 'no data received'}
+        except ConnectionResetError as e:
+            print('connection to server closed')
+            return {'error': 'disconnected from server'}
+        except Exception as e:
+            print(e)
+            return {'error': e}
 
-    def send_data(self, request: dict, encrypt: bool = True):
+    def send_data(self, request: dict, encrypt: bool = True, game: bool = False):
         """
         :param request: a dictionary that is sent to the server
         :param encrypt: a boolean variable, if true: initial rsa exchange was completed and server has AES key,
@@ -149,27 +175,33 @@ class Client:
         else:
             data = self.encrypt_message(request).encode('utf-8')
             print(f'encrypted request: {type(data)}, {data}')
-        if self.Lobby is not None:
-            if self.Lobby.GIM or self.Lobby.waiting:
-                self.soc.sendall(data)
-        else:
+
             # Step 1: Send the message length first (4 bytes)
-            self.soc.send(struct.pack("!I", len(data)))
-            # Step 2: Send the actual JSON data
-            self.soc.sendall(data)
-            print('request sent')
+        self.soc.send(struct.pack("!I", len(data)))
+        # Step 2: Send the actual JSON data
+        self.soc.sendall(data)
+        print('request sent')
+        response = None
+        if game:
+            while response is None:
+                response = self.game_listen()
+        else:
             response = self.listen(encrypt)
-            print(f'response: {response}')
-            if 'checksum' not in response or 'error' in response:
-                return None
-            else:
-                checksum = response['checksum']
-                response.pop('checksum')
-                current_checksum = hashlib.sha256(json.dumps(response).encode('utf-8')).hexdigest()
-                if current_checksum == checksum:
-                    return response
-                else:
+        print(f'response: {response}')
+        if response is not None:
+            try:
+                if 'checksum' not in response or 'error' in response:
                     return None
+                else:
+                    checksum = response['checksum']
+                    response.pop('checksum')
+                    current_checksum = hashlib.sha256(json.dumps(response).encode('utf-8')).hexdigest()
+                    if current_checksum == checksum:
+                        return response
+                    else:
+                        return None
+            except Exception as e:
+                print(e)
 
     def set_lobby(self, lobby):
         print(pickle.loads(lobby))

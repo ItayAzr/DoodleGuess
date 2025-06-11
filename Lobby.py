@@ -82,6 +82,8 @@ class Lobby:
                 self.remove_player(data[key])
             if key == 'start_game':
                 self.GIM = True
+            if key == 'add_player':
+                self.add_player(data[key])
 
     def update_host(self):
         self.playerList.remove(self.host)
@@ -150,5 +152,7 @@ class Lobby:
         except Exception as e:
             print("Error:", e)
             self.word = 'house'
+        finally:
+            print(self.word)
 
 

@@ -47,7 +47,7 @@ class User:
             print(e)
             return None
 
-    def decrypt_message(self, encrypted_data: bytes):
+    def decrypt_message(self, encrypted_data):
         """
         Decrypts a base64-encoded JSON message (nonce + ciphertext + tag).
         Returns a Python dictionary.
@@ -89,7 +89,6 @@ class User:
     # ensures that all the data is received
     def recv_all(self, length):
         try:
-
             data = b''
             while len(data) < length:
                 chunk = self.connection.recv(length - len(data))
@@ -154,7 +153,7 @@ class User:
 
             return None
 
-    def send_response(self, status: str, msg: str,  data: dict = None,):
+    def send_response(self, status: str = 'response', msg: str = 'data sent',  data: dict = None,):
         """
         :param status: request status
         :param msg: message for the client
@@ -176,7 +175,7 @@ class User:
 
             # add the checksum to the response
             response["checksum"] = checksum
-
+            print('sent response to ' + self.get_data('username'))
             print(f'response {response} \n')
             if 'aes_key' not in self.data.keys():
                 response = json.dumps(response).encode('utf-8')

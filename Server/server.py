@@ -205,10 +205,10 @@ class Server:
             for user in self.active_users:
                 if user.get_data('username') in lobby.playerList:
                     if not skip_sender:
-                        user.send_response(data)
+                        user.send_response(msg='game data', data=data)
                     else:
                         if not user.get_data('username') == sender:
-                            user.send_response(data)
+                            user.send_response(msg='game data', data=data)
             return True
         except Exception as e:
             print(e)
@@ -231,11 +231,11 @@ class Server:
         for lobby in self.lobbies:
             if lobby.id == lobby_id:
                 if lobby.add_player(user.get_data('username')):
-                    data = {'lobby': base64.b64encode(pickle.dumps(lobby)).decode()}
+                    lobby_data = {'lobby': base64.b64encode(pickle.dumps(lobby)).decode()}
                     user.lobby = lobby
-                    data = {'data': {'add_player': user.get_data('username')}}
-                    self.game_broadcast(data, lobby, user.get_data('username'), True)
-                    return f'joined {lobby.host}\'s lobby', 'success', data
+                    data = {'action': 'update', 'add_player': user.get_data('username'), 'skip': 'False'}
+                    self.game_broadcast(data, lobby, user.get_data('username'))
+                    return f'joined {lobby.host}\'s lobby', 'success', lobby_data
                 return 'joining lobby failed', 'failed', None
 
     # creates a new lobby

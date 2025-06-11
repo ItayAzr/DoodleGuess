@@ -332,7 +332,7 @@ class JoinLobby(tk.Frame):
     def join_lobby(self, lobby_id):
         data = {
             'lobby_id': lobby_id,
-            "action": "clear"
+            "action": "join_lobby"
         }
         request = self.controller.client.create_request('join_lobby', data)
         response = self.controller.client.send_data(request)
@@ -445,7 +445,11 @@ class LobbyPage(tk.Frame):
         self.update_players_frame()
         self.f_players.grid()
 
-        self.running = True
+        self.listening = threading.Event()
+        self.listening.set()
+
+        self.running = threading.Event()
+        self.running.set()
 
         self.controller.client.Lobby.waiting = True
 
@@ -462,11 +466,8 @@ class LobbyPage(tk.Frame):
             frame = tk.Frame(self.f_players)
             label = tk.Label(frame, text=player)
             label.grid()
-            button = tk.Button(frame, text='remove',
-                               command=lambda p=player: self.controller.client.Lobby.remove_player(p))
-            if self.controller.client.username == self.controller.client.Lobby.host:
+            if player == self.controller.client.Lobby.host:
                 frame.config(bg='yellow')
-                button.grid(row=1, column=0, sticky='n')
             frame.grid(row=row, column=column, sticky='nesw')
             if column < 5:
                 column += 1
@@ -475,44 +476,54 @@ class LobbyPage(tk.Frame):
                 row += 1
 
     def run(self):
-        while self.controller.client.Lobby.waiting:
-            try:
-                message = self.controller.client.game_listen()
-                if 'error' in message:
-                    print(message['error'])
-                elif message['status'] == 'lobby data':
-                    action = message['data'].pop('action')
-                    if action == 'update':
-                        self.controller.client.Lobby.update(message['data'])
 
-                    if self.controller.client.Lobby.host == self.controller.client.username:
-                        self.start_button.grid(row=1, column=0, sticky='n')
+        while self.running.is_set():
+            print('waiting for game data from the server:')
+            while self.listening.is_set():
+                try:
+                    message = self.controller.client.game_listen()
+                    if message:
+                        if 'error' in message:
+                            print(message['error'])
+                        else:
+                            action = message['data'].pop('action')
+                            if action == 'update':
+                                self.controller.client.Lobby.update(message['data'])
 
-                    self.update_players_frame()
+                            if self.controller.client.Lobby.host == self.controller.client.username:
+                                self.start_button.grid(row=1, column=0, sticky='n')
 
-                    if self.controller.client.Lobby.GIM:
-                        self.controller.show_frame(GameBoard)
-                        break
-            except Exception as e:
-                print(e)
-        data = {
-            'action': 'update',
-            'start_game': 'True',
-            'skip': 'True'
-        }
-        request = self.controller.client.create_request('start_game', data)
-        print('request sent')
-        response = self.controller.client.send_data(request)
-        print(f'response: {response}')
-        if response['status'] == 'success':
-            self.controller.client.Lobby.GIM = True
-            self.controller.client.in_game = True
-            self.controller.show_frame(GameBoard)
+                            self.update_players_frame()
+
+                            if self.controller.client.Lobby.GIM:
+                                self.controller.show_frame(GameBoard)
+                                break
+                except Exception as e:
+                    print(e)
+            print('sending start message')
+            data = {
+                'action': 'update',
+                'start_game': 'True',
+                'skip': 'True'
+            }
+            request = self.controller.client.create_request('start_game', data)
+            print('request sent')
+            response = self.controller.client.send_data(request, True)
+            print(f'response: {response}')
+
+            if response is not None and response['status'] == 'success':
+                self.running.clear()
+                self.controller.client.Lobby.GIM = True
+                self.controller.client.in_game = True
+                self.controller.client.Lobby.waiting = False
+                self.controller.show_frame(GameBoard)
+            else:
+                self.listening.set()
 
     def start(self):
         self.controller.client.Lobby.waiting = False
         self.controller.client.Lobby.GIM = True
-01        print('starting game')
+        self.listening.clear()
 
 
 class GameBoard(tk.Frame):
@@ -576,27 +587,33 @@ class GameBoard(tk.Frame):
         while True:
             if not self.can_draw:
                 message = self.controller.client.game_listen()
-                if message is None:
-                    pass
-                if message['turn'] == 'yes':
-                    self.can_draw = True
-                    self.word = message['data']['word']
-                else:
-                    self.can_draw = False
-                    self.word_len = message['data']['word_length']
+                if message:
+                    if 'error' in message:
+                        print(message['error'])
+                    else:
+                        action = message['data'].pop('action')
+                        if action == 'update':
+                            self.controller.client.Lobby.update(message['data'])
 
-                if message['action'] == 'update':
-                    self.controller.client.Lobby.update(message['data'])
+                        if message['turn'] == 'yes':
+                            self.can_draw = True
+                            self.word = message['data']['word']
+                        else:
+                            self.can_draw = False
+                            self.word_len = message['data']['word_length']
 
-                if message['action'] == 'draw':
-                    self.canvas.create_line(
-                        message['data']['x1'], message['data']['y1'],
-                        message['data']['x2'], message['data']['y2'],
-                        fill=message['data']['color'],
-                        width=message['data']['width']
-                    )
-                elif message['action'] == 'clear':
-                    self.canvas.delete("all")
+                        if action == 'update':
+                            self.controller.client.Lobby.update(message['data'])
+
+                        if action == 'draw':
+                            self.canvas.create_line(
+                                message['data']['x1'], message['data']['y1'],
+                                message['data']['x2'], message['data']['y2'],
+                                fill=message['data']['color'],
+                                width=message['data']['width']
+                            )
+                        elif action == 'clear':
+                            self.canvas.delete("all")
 
     def set_guess(self):
         guess = self.guess_entry.get()
